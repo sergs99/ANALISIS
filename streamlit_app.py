@@ -1,151 +1,93 @@
 import streamlit as st
+import yfinance as yf
 import pandas as pd
-import math
-from pathlib import Path
+from datetime import datetime, timedelta
+import ta
 
-# Set the title and favicon that appear in the Browser's tab bar.
-st.set_page_config(
-    page_title='GDP dashboard',
-    page_icon=':earth_americas:', # This is an emoji shortcode. Could be a URL too.
-)
+# Función para obtener datos fundamentales
+def get_fundamental_data(ticker):
+    stock = yf.Ticker(ticker)
+    info = stock.info
+    fundamental_data = {
+        'Nombre': info.get('shortName', 'N/A'),
+        'Sector': info.get('sector', 'N/A'),
+        'Industria': info.get('industry', 'N/A'),
+        'Precio Actual': f"${info.get('currentPrice', 'N/A'):.2f}" if 'currentPrice' in info else 'N/A',
+        'Ratios de Valoración': {
+            'Price Earnings Ratio': info.get('trailingPE', 'N/A'),
+            'Dividend Yield': f"{info.get('dividendYield', 'N/A')*100:.2f}%" if info.get('dividendYield') else 'N/A',
+            'Price to Book Value': info.get('priceToBook', 'N/A'),
+            'PEG Ratio (5yr expected)': info.get('pegRatio', 'N/A'),
+            'Price to Cash Flow Ratio': info.get('priceToCashflow', 'N/A'),
+            'EV/EBITDA': info.get('enterpriseToEbitda', 'N/A')
+        },
+        'Ratios de Rentabilidad': {
+            'Return on Equity': f"{info.get('returnOnEquity', 'N/A')*100:.2f}%" if info.get('returnOnEquity') else 'N/A',
+            'Return on Assets': f"{info.get('returnOnAssets', 'N/A')*100:.2f}%" if info.get('returnOnAssets') else 'N/A',
+            'Profit Margin': f"{info.get('profitMargins', 'N/A')*100:.2f}%" if info.get('profitMargins') else 'N/A',
+            'Operating Margin (ttm)': f"{info.get('operatingMargins', 'N/A')*100:.2f}%" if info.get('operatingMargins') else 'N/A',
+            'Payout Ratio': f"{info.get('payoutRatio', 'N/A')*100:.2f}%" if info.get('payoutRatio') else 'N/A'
+        },
+        'Ratios de Liquidez y Solvencia': {
+            'Current Ratio (mrq)': info.get('currentRatio', 'N/A'),
+            'Total Debt/Equity (mrq)': info.get('debtToEquity', 'N/A')
+        },
+        'Otras Métricas': {
+            'Volumen Actual': f"{info.get('volume', 'N/A'):,}" if 'volume' in info else 'N/A',
+            'Earnings Per Share (EPS)': info.get('trailingEps', 'N/A'),
+            'Capitalización de Mercado': f"${info.get('marketCap', 'N/A') / 1e9:.2f} B" if info.get('marketCap') else 'N/A',
+            'Beta': info.get('beta', 'N/A')
+        }
+    }
+    return fundamental_data
 
-# -----------------------------------------------------------------------------
-# Declare some useful functions.
+# Función para obtener datos históricos
+def get_historical_data(ticker, start_date, end_date):
+    stock = yf.Ticker(ticker)
+    hist = stock.history(start=start_date, end=end_date)
+    if hist.empty:
+        return None
+    return hist
 
-@st.cache_data
-def get_gdp_data():
-    """Grab GDP data from a CSV file.
+# Configuración de Streamlit
+st.title('Dashboard Financiero')
 
-    This uses caching to avoid having to read the file every time. If we were
-    reading from an HTTP endpoint instead of a file, it's a good idea to set
-    a maximum age to the cache with the TTL argument: @st.cache_data(ttl='1d')
-    """
+ticker = st.text_input('Símbolo bursátil:', 'AAPL')
+start_date = st.date_input('Fecha de inicio', value=datetime.today() - timedelta(days=252))
+end_date = st.date_input('Fecha de fin', value=datetime.today())
 
-    # Instead of a CSV on disk, you could read from an HTTP endpoint here too.
-    DATA_FILENAME = Path(__file__).parent/'data/gdp_data.csv'
-    raw_gdp_df = pd.read_csv(DATA_FILENAME)
+if ticker:
+    # Obtener datos históricos
+    hist = get_historical_data(ticker, start_date, end_date)
+    if hist is not None:
+        st.subheader('Datos Históricos')
+        st.line_chart(hist['Close'])
+        st.write(hist)
 
-    MIN_YEAR = 1960
-    MAX_YEAR = 2022
+    # Obtener y mostrar datos fundamentales
+    fundamental_data = get_fundamental_data(ticker)
 
-    # The data above has columns like:
-    # - Country Name
-    # - Country Code
-    # - [Stuff I don't care about]
-    # - GDP for 1960
-    # - GDP for 1961
-    # - GDP for 1962
-    # - ...
-    # - GDP for 2022
-    #
-    # ...but I want this instead:
-    # - Country Name
-    # - Country Code
-    # - Year
-    # - GDP
-    #
-    # So let's pivot all those year-columns into two: Year and GDP
-    gdp_df = raw_gdp_df.melt(
-        ['Country Code'],
-        [str(x) for x in range(MIN_YEAR, MAX_YEAR + 1)],
-        'Year',
-        'GDP',
-    )
+    st.subheader('Análisis Fundamental')
 
-    # Convert years from string to integers
-    gdp_df['Year'] = pd.to_numeric(gdp_df['Year'])
+    st.write(f"**Nombre:** {fundamental_data['Nombre']}")
+    st.write(f"**Sector:** {fundamental_data['Sector']}")
+    st.write(f"**Industria:** {fundamental_data['Industria']}")
+    st.write(f"**Precio Actual:** {fundamental_data['Precio Actual']}")
 
-    return gdp_df
+    st.write("**Ratios de Valoración:**")
+    for key, value in fundamental_data['Ratios de Valoración'].items():
+        st.write(f"{key}: {value}")
 
-gdp_df = get_gdp_data()
+    st.write("**Ratios de Rentabilidad:**")
+    for key, value in fundamental_data['Ratios de Rentabilidad'].items():
+        st.write(f"{key}: {value}")
 
-# -----------------------------------------------------------------------------
-# Draw the actual page
+    st.write("**Ratios de Liquidez y Solvencia:**")
+    for key, value in fundamental_data['Ratios de Liquidez y Solvencia'].items():
+        st.write(f"{key}: {value}")
 
-# Set the title that appears at the top of the page.
-'''
-# :earth_americas: GDP dashboard
+    st.write("**Otras Métricas:**")
+    for key, value in fundamental_data['Otras Métricas'].items():
+        st.write(f"{key}: {value}")
 
-Browse GDP data from the [World Bank Open Data](https://data.worldbank.org/) website. As you'll
-notice, the data only goes to 2022 right now, and datapoints for certain years are often missing.
-But it's otherwise a great (and did I mention _free_?) source of data.
-'''
-
-# Add some spacing
-''
-''
-
-min_value = gdp_df['Year'].min()
-max_value = gdp_df['Year'].max()
-
-from_year, to_year = st.slider(
-    'Which years are you interested in?',
-    min_value=min_value,
-    max_value=max_value,
-    value=[min_value, max_value])
-
-countries = gdp_df['Country Code'].unique()
-
-if not len(countries):
-    st.warning("Select at least one country")
-
-selected_countries = st.multiselect(
-    'Which countries would you like to view?',
-    countries,
-    ['DEU', 'FRA', 'GBR', 'BRA', 'MEX', 'JPN'])
-
-''
-''
-''
-
-# Filter the data
-filtered_gdp_df = gdp_df[
-    (gdp_df['Country Code'].isin(selected_countries))
-    & (gdp_df['Year'] <= to_year)
-    & (from_year <= gdp_df['Year'])
-]
-
-st.header('GDP over time', divider='gray')
-
-''
-
-st.line_chart(
-    filtered_gdp_df,
-    x='Year',
-    y='GDP',
-    color='Country Code',
-)
-
-''
-''
-
-
-first_year = gdp_df[gdp_df['Year'] == from_year]
-last_year = gdp_df[gdp_df['Year'] == to_year]
-
-st.header(f'GDP in {to_year}', divider='gray')
-
-''
-
-cols = st.columns(4)
-
-for i, country in enumerate(selected_countries):
-    col = cols[i % len(cols)]
-
-    with col:
-        first_gdp = first_year[gdp_df['Country Code'] == country]['GDP'].iat[0] / 1000000000
-        last_gdp = last_year[gdp_df['Country Code'] == country]['GDP'].iat[0] / 1000000000
-
-        if math.isnan(first_gdp):
-            growth = 'n/a'
-            delta_color = 'off'
-        else:
-            growth = f'{last_gdp / first_gdp:,.2f}x'
-            delta_color = 'normal'
-
-        st.metric(
-            label=f'{country} GDP',
-            value=f'{last_gdp:,.0f}B',
-            delta=growth,
-            delta_color=delta_color
-        )
+    st.write('Fin de los Datos Fundamentales')
