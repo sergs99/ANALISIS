@@ -120,32 +120,25 @@ try:
         bollinger_fig = update_layout(bollinger_fig, f'Bandas de Bollinger de {ticker}', 'Precio')
         st.plotly_chart(bollinger_fig)
 
-        # RSI
-        rsi_fig = go.Figure()
-        rsi_fig.add_trace(go.Scatter(x=data.index, y=data['RSI'], mode='lines', name='RSI', line=dict(color='magenta')))
-        rsi_fig.add_hline(y=70, line_dash='dash', line_color='red')
-        rsi_fig.add_hline(y=30, line_dash='dash', line_color='green')
-        rsi_fig = update_layout(rsi_fig, f'Índice de Fuerza Relativa (RSI) de {ticker}', 'RSI')
-        st.plotly_chart(rsi_fig)
-
-        # Oscilador Estocástico
-        stochastic_fig = go.Figure()
-        stochastic_fig.add_trace(go.Scatter(x=data.index, y=data['Stoch_K'], mode='lines', name='%K', line=dict(color='yellow')))
-        stochastic_fig.add_trace(go.Scatter(x=data.index, y=data['Stoch_D'], mode='lines', name='%D', line=dict(color='lightcoral')))
-        stochastic_fig = update_layout(stochastic_fig, f'Oscilador Estocástico de {ticker}', 'Valor')
-        st.plotly_chart(stochastic_fig)
-
         # MACD
         macd_fig = go.Figure()
         macd_fig.add_trace(go.Scatter(x=data.index, y=data['MACD'], mode='lines', name='MACD', line=dict(color='blue')))
-        macd_fig.add_trace(go.Scatter(x=data.index, y=data['MACD_Signal'], mode='lines', name='MACD Signal', line=dict(color='orange')))
-        macd_fig.add_trace(go.Bar(x=data.index, y=data['MACD_Histogram'], name='MACD Histogram', marker_color='rgba(255, 87, 34, 0.8)'))
-        macd_fig = update_layout(macd_fig, f'MACD de {ticker}', 'Valor')
+        macd_fig.add_trace(go.Scatter(x=data.index, y=data['MACD_Signal'], mode='lines', name='Línea de Señal', line=dict(color='red')))
+        macd_fig.add_trace(go.Bar(x=data.index, y=data['MACD_Histogram'], name='Histograma', marker_color='rgba(255, 193, 7, 0.5)'))
+        macd_fig = update_layout(macd_fig, f'MACD de {ticker}', 'MACD')
         st.plotly_chart(macd_fig)
+
+        # RSI
+        rsi_fig = go.Figure()
+        rsi_fig.add_trace(go.Scatter(x=data.index, y=data['RSI'], mode='lines', name='RSI', line=dict(color='purple')))
+        rsi_fig.add_hline(y=70, line_dash='dash', line_color='red')
+        rsi_fig.add_hline(y=30, line_dash='dash', line_color='green')
+        rsi_fig = update_layout(rsi_fig, f'RSI de {ticker}', 'RSI')
+        st.plotly_chart(rsi_fig)
 
         # Momentum
         momentum_fig = go.Figure()
-        momentum_fig.add_trace(go.Scatter(x=data.index, y=data['Momentum'], mode='lines', name='Momentum', line=dict(color='purple')))
+        momentum_fig.add_trace(go.Scatter(x=data.index, y=data['Momentum'], mode='lines', name='Momentum', line=dict(color='magenta')))
         momentum_fig = update_layout(momentum_fig, f'Momentum de {ticker}', 'Valor')
         st.plotly_chart(momentum_fig)
 
@@ -223,3 +216,6 @@ try:
 
 except Exception as e:
     st.error(f"Error: {e}")
+
+                st.write(metrics)
+
