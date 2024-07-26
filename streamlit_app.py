@@ -49,7 +49,7 @@ def calculate_technical_indicators(hist):
 # Configuración de la página
 st.set_page_config(page_title="Dashboard Financiero", layout="wide")
 
-st.title('Dashboard Financiero')
+st.title('Analisis Financiero')
 
 # Entradas de usuario
 ticker = st.text_input("Símbolo bursátil:", value='AAPL')
