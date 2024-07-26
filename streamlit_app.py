@@ -5,6 +5,13 @@ import pandas as pd
 from datetime import datetime, timedelta
 import ta
 
+# Configuración de la página
+st.set_page_config(
+    page_title="Dashboard Financiero",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
 # Función para obtener datos históricos y la información del stock
 @st.cache_data
 def get_stock_data(ticker, start_date, end_date):
@@ -46,15 +53,43 @@ def calculate_technical_indicators(hist):
     data['VWAP'] = vwap.volume_weighted_average_price()
     return data
 
-# Configuración de la página
-st.set_page_config(page_title="Dashboard Financiero", layout="wide")
+# Función para mostrar gráficos con estilo
+def plot_graph(fig, title, yaxis_title):
+    fig.update_layout(
+        title=title,
+        xaxis_title='Fecha',
+        yaxis_title=yaxis_title,
+        template='plotly_dark',
+        title_font_size=24,
+        title_font_color='white',
+        xaxis_title_font_size=18,
+        yaxis_title_font_size=18
+    )
+    return fig
 
-st.title('Analisis Financiero')
+# Encabezado
+st.markdown("""
+    <style>
+    .title {
+        font-size: 36px;
+        font-weight: bold;
+        color: #00BFAE;
+    }
+    .subheader {
+        font-size: 28px;
+        font-weight: bold;
+        color: #009688;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
-# Entradas de usuario
-ticker = st.text_input("Símbolo bursátil:", value='AAPL')
-start_date = st.date_input('Fecha de inicio', (datetime.today() - timedelta(days=252)).date())
-end_date = st.date_input('Fecha de fin', datetime.today().date())
+st.markdown('<div class="title">Dashboard Financiero</div>', unsafe_allow_html=True)
+
+# Entradas de usuario en la barra lateral
+st.sidebar.header('Configuración')
+ticker = st.sidebar.text_input("Símbolo bursátil:", value='AAPL')
+start_date = st.sidebar.date_input('Fecha de inicio', (datetime.today() - timedelta(days=252)).date())
+end_date = st.sidebar.date_input('Fecha de fin', datetime.today().date())
 
 # Mostrar datos y gráficos
 try:
@@ -62,7 +97,7 @@ try:
     data = calculate_technical_indicators(hist)
 
     # Tabs
-    selected_tab = st.selectbox('Seleccionar pestaña', ['Análisis Técnico', 'Fundamental'])
+    selected_tab = st.sidebar.selectbox('Seleccionar pestaña', ['Análisis Técnico', 'Fundamental'])
 
     if selected_tab == 'Análisis Técnico':
         # Gráfico de Velas
@@ -76,24 +111,13 @@ try:
             decreasing_line_color='red',
             name='Candlestick'
         )])
-        price_fig.update_layout(
-            title=f'Gráfico de Velas de {ticker}',
-            xaxis_title='Fecha',
-            yaxis_title='Precio',
-            xaxis_rangeslider_visible=False,
-            template='plotly_dark'
-        )
+        price_fig = plot_graph(price_fig, f'Gráfico de Velas de {ticker}', 'Precio')
         st.plotly_chart(price_fig)
 
         # Gráfico de Volumen
         volume_fig = go.Figure()
         volume_fig.add_trace(go.Bar(x=hist.index, y=hist['Volume'], name='Volumen de Negociación', marker_color='rgba(255, 87, 34, 0.8)'))
-        volume_fig.update_layout(
-            title=f'Volumen de Negociación de {ticker}',
-            xaxis_title='Fecha',
-            yaxis_title='Volumen',
-            template='plotly_dark'
-        )
+        volume_fig = plot_graph(volume_fig, f'Volumen de Negociación de {ticker}', 'Volumen')
         st.plotly_chart(volume_fig)
 
         # Bandas de Bollinger
@@ -111,12 +135,7 @@ try:
         bollinger_fig.add_trace(go.Scatter(x=data.index, y=data['BB_Middle'], mode='lines', name='Media Móvil', line=dict(color='cyan')))
         bollinger_fig.add_trace(go.Scatter(x=data.index, y=data['BB_High'], mode='lines', name='Banda Superior', line=dict(color='red')))
         bollinger_fig.add_trace(go.Scatter(x=data.index, y=data['BB_Low'], mode='lines', name='Banda Inferior', line=dict(color='green')))
-        bollinger_fig.update_layout(
-            title=f'Bandas de Bollinger de {ticker}',
-            xaxis_title='Fecha',
-            yaxis_title='Precio',
-            template='plotly_dark'
-        )
+        bollinger_fig = plot_graph(bollinger_fig, f'Bandas de Bollinger de {ticker}', 'Precio')
         st.plotly_chart(bollinger_fig)
 
         # RSI
@@ -124,24 +143,14 @@ try:
         rsi_fig.add_trace(go.Scatter(x=data.index, y=data['RSI'], mode='lines', name='RSI', line=dict(color='magenta')))
         rsi_fig.add_hline(y=70, line_dash='dash', line_color='red')
         rsi_fig.add_hline(y=30, line_dash='dash', line_color='green')
-        rsi_fig.update_layout(
-            title=f'Índice de Fuerza Relativa (RSI) de {ticker}',
-            xaxis_title='Fecha',
-            yaxis_title='RSI',
-            template='plotly_dark'
-        )
+        rsi_fig = plot_graph(rsi_fig, f'Índice de Fuerza Relativa (RSI) de {ticker}', 'RSI')
         st.plotly_chart(rsi_fig)
 
         # Oscilador Estocástico
         stochastic_fig = go.Figure()
         stochastic_fig.add_trace(go.Scatter(x=data.index, y=data['Stoch_K'], mode='lines', name='%K', line=dict(color='yellow')))
         stochastic_fig.add_trace(go.Scatter(x=data.index, y=data['Stoch_D'], mode='lines', name='%D', line=dict(color='lightcoral')))
-        stochastic_fig.update_layout(
-            title=f'Oscilador Estocástico de {ticker}',
-            xaxis_title='Fecha',
-            yaxis_title='Valor',
-            template='plotly_dark'
-        )
+        stochastic_fig = plot_graph(stochastic_fig, f'Oscilador Estocástico de {ticker}', 'Valor')
         st.plotly_chart(stochastic_fig)
 
         # MACD
@@ -149,23 +158,13 @@ try:
         macd_fig.add_trace(go.Scatter(x=data.index, y=data['MACD'], mode='lines', name='MACD', line=dict(color='blue')))
         macd_fig.add_trace(go.Scatter(x=data.index, y=data['MACD_Signal'], mode='lines', name='MACD Signal', line=dict(color='orange')))
         macd_fig.add_trace(go.Bar(x=data.index, y=data['MACD_Histogram'], name='MACD Histogram', marker_color='rgba(255, 87, 34, 0.8)'))
-        macd_fig.update_layout(
-            title=f'MACD de {ticker}',
-            xaxis_title='Fecha',
-            yaxis_title='Valor',
-            template='plotly_dark'
-        )
+        macd_fig = plot_graph(macd_fig, f'MACD de {ticker}', 'Valor')
         st.plotly_chart(macd_fig)
 
         # Momentum
         momentum_fig = go.Figure()
         momentum_fig.add_trace(go.Scatter(x=data.index, y=data['Momentum'], mode='lines', name='Momentum', line=dict(color='purple')))
-        momentum_fig.update_layout(
-            title=f'Momentum de {ticker}',
-            xaxis_title='Fecha',
-            yaxis_title='Valor',
-            template='plotly_dark'
-        )
+        momentum_fig = plot_graph(momentum_fig, f'Momentum de {ticker}', 'Valor')
         st.plotly_chart(momentum_fig)
 
         # ADX
@@ -173,12 +172,7 @@ try:
         adx_fig.add_trace(go.Scatter(x=data.index, y=data['ADX'], mode='lines', name='ADX', line=dict(color='blue')))
         adx_fig.add_trace(go.Scatter(x=data.index, y=data['ADX_Pos'], mode='lines', name='ADX+', line=dict(color='green')))
         adx_fig.add_trace(go.Scatter(x=data.index, y=data['ADX_Neg'], mode='lines', name='ADX-', line=dict(color='red')))
-        adx_fig.update_layout(
-            title=f'ADX de {ticker}',
-            xaxis_title='Fecha',
-            yaxis_title='ADX',
-            template='plotly_dark'
-        )
+        adx_fig = plot_graph(adx_fig, f'ADX de {ticker}', 'ADX')
         st.plotly_chart(adx_fig)
 
         # CCI
@@ -186,34 +180,19 @@ try:
         cci_fig.add_trace(go.Scatter(x=data.index, y=data['CCI'], mode='lines', name='CCI', line=dict(color='orange')))
         cci_fig.add_hline(y=100, line_dash='dash', line_color='red')
         cci_fig.add_hline(y=-100, line_dash='dash', line_color='green')
-        cci_fig.update_layout(
-            title=f'Índice de Canal de Commodities (CCI) de {ticker}',
-            xaxis_title='Fecha',
-            yaxis_title='CCI',
-            template='plotly_dark'
-        )
+        cci_fig = plot_graph(cci_fig, f'Índice de Canal de Commodities (CCI) de {ticker}', 'CCI')
         st.plotly_chart(cci_fig)
 
         # OBV
         obv_fig = go.Figure()
         obv_fig.add_trace(go.Scatter(x=data.index, y=data['OBV'], mode='lines', name='OBV', line=dict(color='blue')))
-        obv_fig.update_layout(
-            title=f'On-Balance Volume (OBV) de {ticker}',
-            xaxis_title='Fecha',
-            yaxis_title='OBV',
-            template='plotly_dark'
-        )
+        obv_fig = plot_graph(obv_fig, f'On-Balance Volume (OBV) de {ticker}', 'OBV')
         st.plotly_chart(obv_fig)
 
         # VWAP
         vwap_fig = go.Figure()
         vwap_fig.add_trace(go.Scatter(x=data.index, y=data['VWAP'], mode='lines', name='VWAP', line=dict(color='cyan')))
-        vwap_fig.update_layout(
-            title=f'Precio Promedio Ponderado por Volumen (VWAP) de {ticker}',
-            xaxis_title='Fecha',
-            yaxis_title='VWAP',
-            template='plotly_dark'
-        )
+        vwap_fig = plot_graph(vwap_fig, f'Precio Promedio Ponderado por Volumen (VWAP) de {ticker}', 'VWAP')
         st.plotly_chart(vwap_fig)
 
     elif selected_tab == 'Fundamental':
@@ -252,6 +231,7 @@ try:
 
         # Mostrar la información en una tabla
         st.subheader(f"Análisis Fundamental de {ticker}")
+        st.write("Aquí tienes un resumen del análisis fundamental.")
 
         for category, metrics in fundamental_data.items():
             st.write(f"**{category}:**")
