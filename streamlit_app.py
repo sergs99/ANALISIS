@@ -8,26 +8,28 @@ from datetime import datetime
 
 # Funciones para el análisis de carteras
 def get_user_input():
-    while True:
+    tickers = st.text_input("Introduce los tickers de las acciones (separados por comas):")
+    weights_input = st.text_input("Introduce los pesos de las acciones (separados por comas, deben sumar 1):")
+    risk_free_rate_input = st.text_input("Introduce la tasa libre de riesgo actual (como fracción, ej. 0.0234 para 2.34%):")
+
+    if tickers and weights_input and risk_free_rate_input:
         try:
-            tickers = st.text_input("Introduce los tickers de las acciones (separados por comas):").split(',')
-            weights = st.text_input("Introduce los pesos de las acciones (separados por comas, deben sumar 1):").split(',')
-            
-            tickers = [ticker.strip().upper() for ticker in tickers]
-            weights = np.array([float(weight.strip()) for weight in weights])
+            tickers = [ticker.strip().upper() for ticker in tickers.split(',')]
+            weights = np.array([float(weight.strip()) for weight in weights_input.split(',')])
 
             if not np.isclose(sum(weights), 1.0, atol=1e-5):
                 st.error("La suma de los pesos debe ser aproximadamente igual a 1.0.")
                 return None, None, None
 
-            risk_free_rate = float(st.text_input("Introduce la tasa libre de riesgo actual (como fracción, ej. 0.0234 para 2.34%):").strip())
+            risk_free_rate = float(risk_free_rate_input.strip())
 
             return tickers, weights, risk_free_rate
         
         except ValueError as e:
             st.error(f"Error: {e}")
-            st.error("Por favor, ingresa los datos nuevamente.")
             return None, None, None
+
+    return None, None, None
 
 def calculate_portfolio_metrics(tickers, weights):
     end_date = datetime.today().strftime('%Y-%m-%d')
@@ -128,7 +130,7 @@ if menu == 'Gestión de Carteras':
 
     tickers, weights, risk_free_rate = get_user_input()
 
-    if tickers and weights:
+    if tickers is not None and weights is not None and risk_free_rate is not None:
         # Calcular métricas de la cartera
         returns, portfolio_return, portfolio_volatility, correlation_matrix, market_returns, portfolio_returns = calculate_portfolio_metrics(tickers, weights)
 
