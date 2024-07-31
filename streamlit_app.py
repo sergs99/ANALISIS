@@ -2,13 +2,8 @@ import streamlit as st
 import yfinance as yf
 import plotly.graph_objs as go
 import pandas as pd
-import numpy as np
-import ta
-import matplotlib.pyplot as plt
-import seaborn as sns
-from scipy.stats import norm
-from scipy.optimize import minimize
 from datetime import datetime, timedelta
+import ta
 
 # Función para obtener datos históricos y la información del stock
 @st.cache_data
@@ -84,7 +79,7 @@ try:
     data = calculate_technical_indicators(hist)
 
     # Tabs
-    selected_tab = st.selectbox('Seleccionar pestaña', ['Análisis Técnico', 'Fundamental', 'Gestión de Carteras'])
+    selected_tab = st.selectbox('Seleccionar pestaña', ['Análisis Técnico', 'Fundamental'])
 
     if selected_tab == 'Análisis Técnico':
         # Gráfico de Velas
@@ -150,9 +145,9 @@ try:
         # ADX
         adx_fig = go.Figure()
         adx_fig.add_trace(go.Scatter(x=data.index, y=data['ADX'], mode='lines', name='ADX', line=dict(color='blue')))
-        adx_fig.add_trace(go.Scatter(x=data.index, y=data['ADX_Pos'], mode='lines', name='ADX Positivo', line=dict(color='green')))
-        adx_fig.add_trace(go.Scatter(x=data.index, y=data['ADX_Neg'], mode='lines', name='ADX Negativo', line=dict(color='red')))
-        adx_fig = update_layout(adx_fig, f'ADX de {ticker}', 'Valor')
+        adx_fig.add_trace(go.Scatter(x=data.index, y=data['ADX_Pos'], mode='lines', name='ADX+', line=dict(color='green')))
+        adx_fig.add_trace(go.Scatter(x=data.index, y=data['ADX_Neg'], mode='lines', name='ADX-', line=dict(color='red')))
+        adx_fig = update_layout(adx_fig, f'ADX de {ticker}', 'ADX')
         st.plotly_chart(adx_fig)
 
         # CCI
@@ -160,33 +155,64 @@ try:
         cci_fig.add_trace(go.Scatter(x=data.index, y=data['CCI'], mode='lines', name='CCI', line=dict(color='orange')))
         cci_fig.add_hline(y=100, line_dash='dash', line_color='red')
         cci_fig.add_hline(y=-100, line_dash='dash', line_color='green')
-        cci_fig = update_layout(cci_fig, f'CCI de {ticker}', 'CCI')
+        cci_fig = update_layout(cci_fig, f'Índice de Canal de Commodities (CCI) de {ticker}', 'CCI')
         st.plotly_chart(cci_fig)
 
         # OBV
         obv_fig = go.Figure()
-        obv_fig.add_trace(go.Scatter(x=data.index, y=data['OBV'], mode='lines', name='OBV', line=dict(color='cyan')))
-        obv_fig = update_layout(obv_fig, f'OBV de {ticker}', 'OBV')
+        obv_fig.add_trace(go.Scatter(x=data.index, y=data['OBV'], mode='lines', name='OBV', line=dict(color='blue')))
+        obv_fig = update_layout(obv_fig, f'On-Balance Volume (OBV) de {ticker}', 'OBV')
         st.plotly_chart(obv_fig)
 
         # VWAP
         vwap_fig = go.Figure()
-        vwap_fig.add_trace(go.Scatter(x=data.index, y=data['VWAP'], mode='lines', name='VWAP', line=dict(color='blue')))
-        vwap_fig = update_layout(vwap_fig, f'VWAP de {ticker}', 'Precio')
+        vwap_fig.add_trace(go.Scatter(x=data.index, y=data['VWAP'], mode='lines', name='VWAP', line=dict(color='cyan')))
+        vwap_fig = update_layout(vwap_fig, f'Precio Promedio Ponderado por Volumen (VWAP) de {ticker}', 'VWAP')
         st.plotly_chart(vwap_fig)
 
     elif selected_tab == 'Fundamental':
-        st.write(f"Nombre de la empresa: {info.get('longName', 'N/A')}")
-        st.write(f"Sector: {info.get('sector', 'N/A')}")
-        st.write(f"Industria: {info.get('industry', 'N/A')}")
-        st.write(f"Precio actual: ${hist['Close'].iloc[-1]:.2f}")
-        st.write(f"Capitalización de mercado: ${info.get('marketCap', 'N/A'):.2f}")
-        st.write(f"PE Ratio (ttm): {info.get('forwardEps', 'N/A')}")
-        st.write(f"Rendimiento del dividendo: {info.get('dividendYield', 'N/A') * 100:.2f}%")
-        st.write(f"Beta: {info.get('beta', 'N/A')}")
+        # Información financiera organizada
+        fundamental_data = {
+            'Nombre': info.get('shortName', 'N/A'),
+            'Sector': info.get('sector', 'N/A'),
+            'Industria': info.get('industry', 'N/A'),
+            'Precio Actual': f"${info.get('currentPrice', 'N/A'):.2f}" if 'currentPrice' in info else 'N/A',
+            'Ratios de Valoración': {
+                'Price Earnings Ratio': info.get('trailingPE', 'N/A'),
+                'Dividend Yield': f"{info.get('dividendYield', 'N/A')*100:.2f}%" if info.get('dividendYield') else 'N/A',
+                'Price to Book Value': info.get('priceToBook', 'N/A'),
+                'PEG Ratio (5yr expected)': info.get('pegRatio', 'N/A'),
+                'Price to Cash Flow Ratio': info.get('priceToCashflow', 'N/A'),
+                'EV/EBITDA': info.get('enterpriseToEbitda', 'N/A')
+            },
+            'Ratios de Rentabilidad': {
+                'Return on Equity': f"{info.get('returnOnEquity', 'N/A')*100:.2f}%" if info.get('returnOnEquity') else 'N/A',
+                'Return on Assets': f"{info.get('returnOnAssets', 'N/A')*100:.2f}%" if info.get('returnOnAssets') else 'N/A',
+                'Profit Margin': f"{info.get('profitMargins', 'N/A')*100:.2f}%" if info.get('profitMargins') else 'N/A',
+                'Operating Margin (ttm)': f"{info.get('operatingMargins', 'N/A')*100:.2f}%" if info.get('operatingMargins') else 'N/A',
+                'Payout Ratio': f"{info.get('payoutRatio', 'N/A')*100:.2f}%" if info.get('payoutRatio') else 'N/A'
+            },
+            'Ratios de Liquidez y Solvencia': {
+                'Current Ratio (mrq)': info.get('currentRatio', 'N/A'),
+                'Total Debt/Equity (mrq)': info.get('debtToEquity', 'N/A')
+            },
+            'Otras Métricas': {
+                'Volumen Actual': f"{info.get('volume', 'N/A'):,}" if 'volume' in info else 'N/A',
+                'Earnings Per Share (EPS)': info.get('trailingEps', 'N/A'),
+                'Capitalización de Mercado': f"${info.get('marketCap', 'N/A') / 1e9:.2f} B" if info.get('marketCap') else 'N/A',
+                'Beta': info.get('beta', 'N/A')
+            }
+        }
 
-    elif selected_tab == 'Gestión de Carteras':
-        st.write("Aquí puedes agregar análisis y gestión de carteras.")
+        # Mostrar la información en una tabla
+        st.subheader(f"Análisis Fundamental de {ticker}")
+
+        for category, metrics in fundamental_data.items():
+            st.write(f"**{category}:**")
+            if isinstance(metrics, dict):
+                st.write(pd.DataFrame(list(metrics.items()), columns=['Métrica', 'Valor']).set_index('Métrica'))
+            else:
+                st.write(metrics)
 
 except Exception as e:
-    st.error(f'Error al obtener datos o generar gráficos: {e}')
+    st.error(f"Error: {e}")
