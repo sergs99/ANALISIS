@@ -4,11 +4,6 @@ import plotly.graph_objs as go
 import pandas as pd
 from datetime import datetime, timedelta
 import ta
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-from scipy.stats import norm
-from scipy.optimize import minimize
 
 # Función para obtener datos históricos y la información del stock
 @st.cache_data
@@ -84,7 +79,7 @@ try:
     data = calculate_technical_indicators(hist)
 
     # Tabs
-    selected_tab = st.selectbox('Seleccionar pestaña', ['Análisis Técnico', 'Análisis Fundamental', 'Gestión de Carteras'])
+    selected_tab = st.selectbox('Seleccionar pestaña', ['Análisis Técnico', 'Fundamental'])
 
     if selected_tab == 'Análisis Técnico':
         # Gráfico de Velas
@@ -160,84 +155,64 @@ try:
         cci_fig.add_trace(go.Scatter(x=data.index, y=data['CCI'], mode='lines', name='CCI', line=dict(color='orange')))
         cci_fig.add_hline(y=100, line_dash='dash', line_color='red')
         cci_fig.add_hline(y=-100, line_dash='dash', line_color='green')
-        cci_fig = update_layout(cci_fig, f'CCI de {ticker}', 'CCI')
+        cci_fig = update_layout(cci_fig, f'Índice de Canal de Commodities (CCI) de {ticker}', 'CCI')
         st.plotly_chart(cci_fig)
 
         # OBV
         obv_fig = go.Figure()
-        obv_fig.add_trace(go.Scatter(x=data.index, y=data['OBV'], mode='lines', name='OBV', line=dict(color='cyan')))
-        obv_fig = update_layout(obv_fig, f'OBV de {ticker}', 'OBV')
+        obv_fig.add_trace(go.Scatter(x=data.index, y=data['OBV'], mode='lines', name='OBV', line=dict(color='blue')))
+        obv_fig = update_layout(obv_fig, f'On-Balance Volume (OBV) de {ticker}', 'OBV')
         st.plotly_chart(obv_fig)
 
         # VWAP
         vwap_fig = go.Figure()
-        vwap_fig.add_trace(go.Scatter(x=data.index, y=data['VWAP'], mode='lines', name='VWAP', line=dict(color='yellow')))
-        vwap_fig = update_layout(vwap_fig, f'VWAP de {ticker}', 'VWAP')
+        vwap_fig.add_trace(go.Scatter(x=data.index, y=data['VWAP'], mode='lines', name='VWAP', line=dict(color='cyan')))
+        vwap_fig = update_layout(vwap_fig, f'Precio Promedio Ponderado por Volumen (VWAP) de {ticker}', 'VWAP')
         st.plotly_chart(vwap_fig)
 
-    elif selected_tab == 'Análisis Fundamental':
-        # Datos fundamentales
-        st.subheader(f'Información Fundamental de {ticker}')
-        info_df = pd.DataFrame.from_dict(info, orient='index', columns=['Valor'])
-        st.write(info_df)
+    elif selected_tab == 'Fundamental':
+        # Información financiera organizada
+        fundamental_data = {
+            'Nombre': info.get('shortName', 'N/A'),
+            'Sector': info.get('sector', 'N/A'),
+            'Industria': info.get('industry', 'N/A'),
+            'Precio Actual': f"${info.get('currentPrice', 'N/A'):.2f}" if 'currentPrice' in info else 'N/A',
+            'Ratios de Valoración': {
+                'Price Earnings Ratio': info.get('trailingPE', 'N/A'),
+                'Dividend Yield': f"{info.get('dividendYield', 'N/A')*100:.2f}%" if info.get('dividendYield') else 'N/A',
+                'Price to Book Value': info.get('priceToBook', 'N/A'),
+                'PEG Ratio (5yr expected)': info.get('pegRatio', 'N/A'),
+                'Price to Cash Flow Ratio': info.get('priceToCashflow', 'N/A'),
+                'EV/EBITDA': info.get('enterpriseToEbitda', 'N/A')
+            },
+            'Ratios de Rentabilidad': {
+                'Return on Equity': f"{info.get('returnOnEquity', 'N/A')*100:.2f}%" if info.get('returnOnEquity') else 'N/A',
+                'Return on Assets': f"{info.get('returnOnAssets', 'N/A')*100:.2f}%" if info.get('returnOnAssets') else 'N/A',
+                'Profit Margin': f"{info.get('profitMargins', 'N/A')*100:.2f}%" if info.get('profitMargins') else 'N/A',
+                'Operating Margin (ttm)': f"{info.get('operatingMargins', 'N/A')*100:.2f}%" if info.get('operatingMargins') else 'N/A',
+                'Payout Ratio': f"{info.get('payoutRatio', 'N/A')*100:.2f}%" if info.get('payoutRatio') else 'N/A'
+            },
+            'Ratios de Liquidez y Solvencia': {
+                'Current Ratio (mrq)': info.get('currentRatio', 'N/A'),
+                'Total Debt/Equity (mrq)': info.get('debtToEquity', 'N/A')
+            },
+            'Otras Métricas': {
+                'Volumen Actual': f"{info.get('volume', 'N/A'):,}" if 'volume' in info else 'N/A',
+                'Earnings Per Share (EPS)': info.get('trailingEps', 'N/A'),
+                'Capitalización de Mercado': f"${info.get('marketCap', 'N/A') / 1e9:.2f} B" if info.get('marketCap') else 'N/A',
+                'Beta': info.get('beta', 'N/A')
+            }
+        }
 
-    elif selected_tab == 'Gestión de Carteras':
-        # Selección de acciones
-        st.subheader('Gestión de Carteras')
-        tickers = st.text_area('Ingrese los símbolos bursátiles separados por comas (por ejemplo: AAPL, MSFT, TSLA)').split(',')
+        # Mostrar la información en una tabla
+        st.subheader(f"Análisis Fundamental de {ticker}")
 
-        if tickers:
-            tickers = [ticker.strip().upper() for ticker in tickers]
-            start_date = st.date_input('Fecha de inicio de cartera', (datetime.today() - timedelta(days=365)).date())
-            end_date = st.date_input('Fecha de fin de cartera', datetime.today().date())
-            portfolio_data = {}
-
-            for ticker in tickers:
-                try:
-                    hist, _ = get_stock_data(ticker, start_date, end_date)
-                    portfolio_data[ticker] = hist['Close']
-                except Exception as e:
-                    st.error(f'Error al obtener datos para {ticker}: {e}')
-
-            if portfolio_data:
-                # DataFrame de cartera
-                portfolio_df = pd.DataFrame(portfolio_data)
-                portfolio_returns = portfolio_df.pct_change().dropna()
-                st.subheader('Rendimiento de la Cartera')
-                st.line_chart(portfolio_df)
-
-                # Gráfico de correlación
-                st.subheader('Correlación de Rendimientos')
-                corr_matrix = portfolio_returns.corr()
-                fig, ax = plt.subplots(figsize=(10, 8))
-                sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', ax=ax)
-                st.pyplot(fig)
-
-                # Optimización de la cartera
-                def portfolio_performance(weights, returns):
-                    port_return = np.sum(returns.mean() * weights) * 252
-                    port_volatility = np.sqrt(np.dot(weights.T, np.dot(returns.cov() * 252, weights)))
-                    return port_volatility, port_return
-
-                def negative_sharpe_ratio(weights, returns):
-                    port_volatility, port_return = portfolio_performance(weights, returns)
-                    return -(port_return / port_volatility)
-
-                def optimize_portfolio(returns):
-                    num_assets = len(returns.columns)
-                    args = (returns)
-                    constraints = ({'type': 'eq', 'fun': lambda x: np.sum(x) - 1})
-                    bounds = tuple((0, 1) for _ in range(num_assets))
-                    result = minimize(negative_sharpe_ratio, num_assets * [1. / num_assets,], args=args, method='SLSQP', bounds=bounds, constraints=constraints)
-                    return result
-
-                optimal_result = optimize_portfolio(portfolio_returns)
-                st.subheader('Optimización de la Cartera')
-                st.write('Pesos óptimos:')
-                st.write(pd.Series(optimal_result.x, index=portfolio_returns.columns))
-                optimal_volatility, optimal_return = portfolio_performance(optimal_result.x, portfolio_returns)
-                st.write(f'Rendimiento esperado: {optimal_return:.2f}')
-                st.write(f'Volatilidad esperada: {optimal_volatility:.2f}')
+        for category, metrics in fundamental_data.items():
+            st.write(f"**{category}:**")
+            if isinstance(metrics, dict):
+                st.write(pd.DataFrame(list(metrics.items()), columns=['Métrica', 'Valor']).set_index('Métrica'))
+            else:
+                st.write(metrics)
 
 except Exception as e:
-    st.error(f'Ocurrió un error: {e}')
+    st.error(f"Error: {e}")
