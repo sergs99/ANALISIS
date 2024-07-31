@@ -217,7 +217,6 @@ try:
 except Exception as e:
     st.error(f"Error: {e}")
 
-
 import streamlit as st
 import yfinance as yf
 import numpy as np
@@ -259,7 +258,7 @@ def calculate_portfolio_metrics(tickers, weights):
         data = yf.download(tickers_with_market, start='2020-01-01', end=end_date)['Adj Close']
     except Exception as e:
         st.error(f"Error al descargar datos: {e}")
-        raise
+        return None, None, None, None, None, None
 
     if data.empty:
         st.error("No se descargaron datos para los tickers proporcionados.")
@@ -373,8 +372,8 @@ def main():
 
     if app_mode == "Gestión de Carteras":
         tickers, weights, risk_free_rate = get_user_input()
-        
-        if tickers and weights:
+
+        if tickers and weights is not None:
             # Calcular métricas de la cartera inicial
             returns, portfolio_return, portfolio_volatility, correlation_matrix, market_returns, portfolio_returns = calculate_portfolio_metrics(tickers, weights)
 
@@ -397,35 +396,36 @@ def main():
                 # Optimizar la cartera
                 optimal_weights = optimize_portfolio(returns[tickers], risk_free_rate)
 
-                # Calcular métricas de la cartera óptima
-                optimal_portfolio_returns = returns[tickers].dot(optimal_weights)
-                optimal_return = optimal_portfolio_returns.mean() * 252
-                optimal_volatility = optimal_portfolio_returns.std() * np.sqrt(252)
+                if optimal_weights is not None:
+                    # Calcular métricas de la cartera óptima
+                    optimal_portfolio_returns = returns[tickers].dot(optimal_weights)
+                    optimal_return = optimal_portfolio_returns.mean() * 252
+                    optimal_volatility = optimal_portfolio_returns.std() * np.sqrt(252)
 
-                # Calcular el Ratio de Sharpe para la cartera óptima
-                optimal_sharpe_ratio = calculate_sharpe_ratio(optimal_return, optimal_volatility, risk_free_rate)
+                    # Calcular el Ratio de Sharpe para la cartera óptima
+                    optimal_sharpe_ratio = calculate_sharpe_ratio(optimal_return, optimal_volatility, risk_free_rate)
 
-                # Calcular el Ratio de Sortino para la cartera óptima
-                optimal_sortino_ratio = calculate_sortino_ratio(optimal_portfolio_returns, risk_free_rate)
+                    # Calcular el Ratio de Sortino para la cartera óptima
+                    optimal_sortino_ratio = calculate_sortino_ratio(optimal_portfolio_returns, risk_free_rate)
 
-                # Calcular el Ratio de Treynor para la cartera óptima
-                optimal_treynor_ratio = calculate_treynor_ratio(optimal_portfolio_returns, market_returns, risk_free_rate)
+                    # Calcular el Ratio de Treynor para la cartera óptima
+                    optimal_treynor_ratio = calculate_treynor_ratio(optimal_portfolio_returns, market_returns, risk_free_rate)
 
-                st.write("Composición óptima de la cartera:")
-                for ticker, weight in zip(tickers, optimal_weights):
-                    st.write(f"{ticker}: {weight:.2%}")
+                    st.write("Composición óptima de la cartera:")
+                    for ticker, weight in zip(tickers, optimal_weights):
+                        st.write(f"{ticker}: {weight:.2%}")
 
-                st.write(f"Rentabilidad media anualizada de la cartera óptima: {optimal_return * 100:.2f}%")
-                st.write(f"Volatilidad anualizada de la cartera óptima: {optimal_volatility * 100:.2f}%")
-                st.write(f"Ratio de Sharpe de la cartera óptima: {optimal_sharpe_ratio:.2f}")
-                st.write(f"Ratio de Sortino de la cartera óptima: {optimal_sortino_ratio:.2f}")
-                st.write(f"Ratio de Treynor de la cartera óptima: {optimal_treynor_ratio:.2f}")
+                    st.write(f"Rentabilidad media anualizada de la cartera óptima: {optimal_return * 100:.2f}%")
+                    st.write(f"Volatilidad anualizada de la cartera óptima: {optimal_volatility * 100:.2f}%")
+                    st.write(f"Ratio de Sharpe de la cartera óptima: {optimal_sharpe_ratio:.2f}")
+                    st.write(f"Ratio de Sortino de la cartera óptima: {optimal_sortino_ratio:.2f}")
+                    st.write(f"Ratio de Treynor de la cartera óptima: {optimal_treynor_ratio:.2f}")
 
-                # Graficar CML y SML
-                plot_cml_sml(portfolio_return, portfolio_volatility, market_returns, risk_free_rate)
+                    # Graficar CML y SML
+                    plot_cml_sml(portfolio_return, portfolio_volatility, market_returns, risk_free_rate)
 
-                # Verificar normalidad de los retornos
-                check_normality(returns[tickers])
+                    # Verificar normalidad de los retornos
+                    check_normality(returns[tickers])
 
     elif app_mode == "Análisis Técnico":
         st.subheader("Análisis Técnico")
