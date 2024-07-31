@@ -276,6 +276,7 @@ def calculate_portfolio_metrics(tickers, weights):
     data = download_data(tickers_with_market, start='2020-01-01', end=end_date)
     
     if data is None:
+        st.error("No se pudieron descargar los datos. Verifica tus tickers y conexión a Internet.")
         return None, None, None, None, None, None
 
     returns = data.pct_change().dropna()
@@ -391,10 +392,16 @@ def main():
 
         if tickers and weights is not None:
             # Calcular métricas de la cartera inicial
-            returns, portfolio_return, portfolio_volatility, correlation_matrix, market_returns, portfolio_returns = calculate_portfolio_metrics(tickers, weights)
+            results = calculate_portfolio_metrics(tickers, weights)
+            
+            if results is None:
+                st.error("No se pudieron calcular las métricas de la cartera.")
+                return
 
+            returns, portfolio_return, portfolio_volatility, correlation_matrix, market_returns, portfolio_returns = results
+            
+            # Mostrar resultados de la cartera inicial
             if returns is not None:
-                # Mostrar resultados de la cartera inicial
                 plot_portfolio_data(portfolio_return, portfolio_volatility, correlation_matrix)
 
                 # Calcular y mostrar el Ratio de Sharpe para la cartera inicial
