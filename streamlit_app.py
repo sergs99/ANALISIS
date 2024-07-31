@@ -495,7 +495,8 @@ if menu == 'Gestión de Carteras':
                 
         except Exception as e:
             st.error(f"Ocurrió un error: {e}")
-)
 
 else:
     st.write('Selecciona una opción del menú para mostrar el contenido.')
+
+)
