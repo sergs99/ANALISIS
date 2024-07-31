@@ -2,8 +2,13 @@ import streamlit as st
 import yfinance as yf
 import plotly.graph_objs as go
 import pandas as pd
-from datetime import datetime, timedelta
+import numpy as np
 import ta
+import matplotlib.pyplot as plt
+import seaborn as sns
+from scipy.stats import norm
+from scipy.optimize import minimize
+from datetime import datetime, timedelta
 
 # Función para obtener datos históricos y la información del stock
 @st.cache_data
@@ -145,9 +150,9 @@ try:
         # ADX
         adx_fig = go.Figure()
         adx_fig.add_trace(go.Scatter(x=data.index, y=data['ADX'], mode='lines', name='ADX', line=dict(color='blue')))
-        adx_fig.add_trace(go.Scatter(x=data.index, y=data['ADX_Pos'], mode='lines', name='ADX+', line=dict(color='green')))
-        adx_fig.add_trace(go.Scatter(x=data.index, y=data['ADX_Neg'], mode='lines', name='ADX-', line=dict(color='red')))
-        adx_fig = update_layout(adx_fig, f'ADX de {ticker}', 'ADX')
+        adx_fig.add_trace(go.Scatter(x=data.index, y=data['ADX_Pos'], mode='lines', name='ADX Positivo', line=dict(color='green')))
+        adx_fig.add_trace(go.Scatter(x=data.index, y=data['ADX_Neg'], mode='lines', name='ADX Negativo', line=dict(color='red')))
+        adx_fig = update_layout(adx_fig, f'ADX de {ticker}', 'Valor')
         st.plotly_chart(adx_fig)
 
         # CCI
@@ -155,265 +160,33 @@ try:
         cci_fig.add_trace(go.Scatter(x=data.index, y=data['CCI'], mode='lines', name='CCI', line=dict(color='orange')))
         cci_fig.add_hline(y=100, line_dash='dash', line_color='red')
         cci_fig.add_hline(y=-100, line_dash='dash', line_color='green')
-        cci_fig = update_layout(cci_fig, f'Índice de Canal de Commodities (CCI) de {ticker}', 'CCI')
+        cci_fig = update_layout(cci_fig, f'CCI de {ticker}', 'CCI')
         st.plotly_chart(cci_fig)
 
         # OBV
         obv_fig = go.Figure()
-        obv_fig.add_trace(go.Scatter(x=data.index, y=data['OBV'], mode='lines', name='OBV', line=dict(color='blue')))
-        obv_fig = update_layout(obv_fig, f'On-Balance Volume (OBV) de {ticker}', 'OBV')
+        obv_fig.add_trace(go.Scatter(x=data.index, y=data['OBV'], mode='lines', name='OBV', line=dict(color='cyan')))
+        obv_fig = update_layout(obv_fig, f'OBV de {ticker}', 'OBV')
         st.plotly_chart(obv_fig)
 
         # VWAP
         vwap_fig = go.Figure()
-        vwap_fig.add_trace(go.Scatter(x=data.index, y=data['VWAP'], mode='lines', name='VWAP', line=dict(color='cyan')))
-        vwap_fig = update_layout(vwap_fig, f'Precio Promedio Ponderado por Volumen (VWAP) de {ticker}', 'VWAP')
+        vwap_fig.add_trace(go.Scatter(x=data.index, y=data['VWAP'], mode='lines', name='VWAP', line=dict(color='blue')))
+        vwap_fig = update_layout(vwap_fig, f'VWAP de {ticker}', 'Precio')
         st.plotly_chart(vwap_fig)
 
     elif selected_tab == 'Fundamental':
-        # Información financiera organizada
-        fundamental_data = {
-            'Nombre': info.get('shortName', 'N/A'),
-            'Sector': info.get('sector', 'N/A'),
-            'Industria': info.get('industry', 'N/A'),
-            'Precio Actual': f"${info.get('currentPrice', 'N/A'):.2f}" if 'currentPrice' in info else 'N/A',
-            'Ratios de Valoración': {
-                'Price Earnings Ratio': info.get('trailingPE', 'N/A'),
-                'Dividend Yield': f"{info.get('dividendYield', 'N/A')*100:.2f}%" if info.get('dividendYield') else 'N/A',
-                'Price to Book Value': info.get('priceToBook', 'N/A'),
-                'PEG Ratio (5yr expected)': info.get('pegRatio', 'N/A'),
-                'Price to Cash Flow Ratio': info.get('priceToCashflow', 'N/A'),
-                'EV/EBITDA': info.get('enterpriseToEbitda', 'N/A')
-            },
-            'Ratios de Rentabilidad': {
-                'Return on Equity': f"{info.get('returnOnEquity', 'N/A')*100:.2f}%" if info.get('returnOnEquity') else 'N/A',
-                'Return on Assets': f"{info.get('returnOnAssets', 'N/A')*100:.2f}%" if info.get('returnOnAssets') else 'N/A',
-                'Profit Margin': f"{info.get('profitMargins', 'N/A')*100:.2f}%" if info.get('profitMargins') else 'N/A',
-                'Operating Margin (ttm)': f"{info.get('operatingMargins', 'N/A')*100:.2f}%" if info.get('operatingMargins') else 'N/A',
-                'Payout Ratio': f"{info.get('payoutRatio', 'N/A')*100:.2f}%" if info.get('payoutRatio') else 'N/A'
-            },
-            'Ratios de Liquidez y Solvencia': {
-                'Current Ratio (mrq)': info.get('currentRatio', 'N/A'),
-                'Total Debt/Equity (mrq)': info.get('debtToEquity', 'N/A')
-            },
-            'Otras Métricas': {
-                'Volumen Actual': f"{info.get('volume', 'N/A'):,}" if 'volume' in info else 'N/A',
-                'Earnings Per Share (EPS)': info.get('trailingEps', 'N/A'),
-                'Capitalización de Mercado': f"${info.get('marketCap', 'N/A') / 1e9:.2f} B" if info.get('marketCap') else 'N/A',
-                'Beta': info.get('beta', 'N/A')
-            }
-        }
-
-        # Mostrar la información en una tabla
-        st.subheader(f"Análisis Fundamental de {ticker}")
-
-        for category, metrics in fundamental_data.items():
-            st.write(f"**{category}:**")
-            if isinstance(metrics, dict):
-                st.write(pd.DataFrame(list(metrics.items()), columns=['Métrica', 'Valor']).set_index('Métrica'))
-            else:
-                st.write(metrics)
+        st.write(f"Nombre de la empresa: {info.get('longName', 'N/A')}")
+        st.write(f"Sector: {info.get('sector', 'N/A')}")
+        st.write(f"Industria: {info.get('industry', 'N/A')}")
+        st.write(f"Precio actual: ${hist['Close'].iloc[-1]:.2f}")
+        st.write(f"Capitalización de mercado: ${info.get('marketCap', 'N/A'):.2f}")
+        st.write(f"PE Ratio (ttm): {info.get('forwardEps', 'N/A')}")
+        st.write(f"Rendimiento del dividendo: {info.get('dividendYield', 'N/A') * 100:.2f}%")
+        st.write(f"Beta: {info.get('beta', 'N/A')}")
 
     elif selected_tab == 'Gestión de Carteras':
-        st.subheader("Gestión de Carteras")
-        st.write("Esta sección está destinada a gestionar y visualizar múltiples activos en una cartera.")
-
-        # Aquí puedes agregar widgets para ingresar diferentes activos y calcular métricas de cartera.
-        # Ejemplo de widget para ingresar una lista de tickers
-        portfolio_tickers = st.text_input("Ingrese los símbolos bursátiles separados por coma (ejemplo: AAPL, MSFT, TSLA)", value='AAPL, MSFT, TSLA')
-
-        if portfolio_tickers:
-            tickers = [ticker.strip() for ticker in portfolio_tickers.split(',')]
-            st.write(f"Análisis para los tickers: {', '.join(tickers)}")
-            # Aquí deberías implementar la lógica para analizar una cartera de tickers
-           def get_user_input():
-    while True:
-        try:
-            tickers = input("Introduce los tickers de las acciones (separados por comas): ").split(',')
-            weights = input("Introduce los pesos de las acciones (separados por comas, deben sumar 1): ").split(',')
-            
-            tickers = [ticker.strip().upper() for ticker in tickers]
-            weights = np.array([float(weight.strip()) for weight in weights])
-
-            if not np.isclose(sum(weights), 1.0, atol=1e-5):
-                raise ValueError("La suma de los pesos debe ser aproximadamente igual a 1.0.")
-
-            risk_free_rate = float(input("Introduce la tasa libre de riesgo actual (como fracción, ej. 0.0234 para 2.34%): ").strip())
-
-            return tickers, weights, risk_free_rate
-        
-        except ValueError as e:
-            print(f"Error: {e}")
-            print("Por favor, ingresa los datos nuevamente.")
-
-def calculate_portfolio_metrics(tickers, weights):
-    end_date = datetime.today().strftime('%Y-%m-%d')
-    tickers_with_market = tickers + ['^GSPC']
-    try:
-        data = yf.download(tickers_with_market, start='2020-01-01', end=end_date)['Adj Close']
-    except Exception as e:
-        print(f"Error al descargar datos: {e}")
-        raise
-
-    if data.empty:
-        raise ValueError("No se descargaron datos para los tickers proporcionados.")
-
-    returns = data.pct_change().dropna()
-    if returns.empty:
-        raise ValueError("Los datos descargados no tienen suficientes retornos.")
-
-    market_returns = returns['^GSPC']
-    portfolio_returns = returns[tickers].dot(weights)
-    
-    annualized_return = portfolio_returns.mean() * 252
-    annualized_volatility = portfolio_returns.std() * np.sqrt(252)
-    
-    correlation_matrix = returns.corr()
-
-    return returns, annualized_return, annualized_volatility, correlation_matrix, market_returns, portfolio_returns
-
-def calculate_sharpe_ratio(portfolio_return, portfolio_volatility, risk_free_rate):
-    sharpe_ratio = (portfolio_return - risk_free_rate) / portfolio_volatility
-    return sharpe_ratio
-
-def calculate_sortino_ratio(portfolio_returns, risk_free_rate):
-    downside_risk = np.sqrt(np.mean(np.minimum(0, portfolio_returns - risk_free_rate / 252) ** 2) * 252)
-    portfolio_return = portfolio_returns.mean() * 252
-    sortino_ratio = (portfolio_return - risk_free_rate) / downside_risk
-    return sortino_ratio
-
-def calculate_treynor_ratio(portfolio_returns, market_returns, risk_free_rate):
-    portfolio_return = portfolio_returns.mean() * 252
-    market_return = market_returns.mean() * 252
-    beta = np.cov(portfolio_returns, market_returns)[0, 1] / np.var(market_returns)
-    treynor_ratio = (portfolio_return - risk_free_rate) / beta
-    return treynor_ratio
-
-def optimize_portfolio(returns, risk_free_rate):
-    def objective(weights):
-        portfolio_returns = returns.dot(weights)
-        portfolio_return = portfolio_returns.mean() * 252
-        portfolio_volatility = portfolio_returns.std() * np.sqrt(252)
-        sharpe_ratio = (portfolio_return - risk_free_rate) / portfolio_volatility
-        return -sharpe_ratio
-
-    num_assets = returns.shape[1]
-    constraints = [{'type': 'eq', 'fun': lambda x: np.sum(x) - 1}]
-    bounds = [(0, 1) for _ in range(num_assets)]
-    initial_weights = np.array(num_assets * [1. / num_assets])
-
-    result = minimize(objective, initial_weights, method='SLSQP', bounds=bounds, constraints=constraints)
-
-    return result.x
-
-def plot_portfolio_data(portfolio_return, portfolio_volatility, correlation_matrix):
-    plt.figure(figsize=(12, 6))
-    
-    plt.subplot(1, 2, 1)
-    plt.title("Rentabilidad y Volatilidad")
-    plt.bar(["Rentabilidad", "Volatilidad"], [portfolio_return * 100, portfolio_volatility * 100], color=['blue', 'orange'])
-    plt.ylabel('Porcentaje')
-
-    plt.subplot(1, 2, 2)
-    plt.title("Matriz de Correlación")
-    sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', vmin=-1, vmax=1, fmt='.2f')
-    plt.tight_layout()
-    plt.show()
-
-def plot_cml_sml(portfolio_return, portfolio_volatility, market_returns, risk_free_rate):
-    market_return = market_returns.mean() * 252
-    market_volatility = market_returns.std() * np.sqrt(252)
-
-    volatilities = np.linspace(0, market_volatility * 2, 100)
-    returns_cml = risk_free_rate + (portfolio_return - risk_free_rate) / portfolio_volatility * volatilities
-
-    returns_sml = np.linspace(risk_free_rate, market_return * 1.5, 100)
-    volatilities_sml = (returns_sml - risk_free_rate) / market_return * market_volatility
-
-    plt.figure(figsize=(12, 8))
-    plt.title("Capital Market Line (CML) y Security Market Line (SML)")
-
-    plt.plot(volatilities, returns_cml, label='Capital Market Line (CML)', color='blue')
-    plt.plot(volatilities_sml, returns_sml, label='Security Market Line (SML)', color='red')
-    plt.scatter(portfolio_volatility, portfolio_return, color='green', marker='o', s=100, label='Cartera')
-    plt.scatter(market_volatility, market_return, color='orange', marker='x', s=100, label='Mercado')
-
-    plt.xlabel('Volatilidad')
-    plt.ylabel('Retorno')
-    plt.legend()
-    plt.grid(True)
-    plt.show()
-
-def check_normality(returns):
-    plt.figure(figsize=(12, 6))
-    
-    sns.histplot(returns.mean(axis=1) * 252, kde=True, stat='density', linewidth=0, bins=50)
-    
-    mu, std = norm.fit(returns.mean(axis=1) * 252)
-    xmin, xmax = plt.xlim()
-    x = np.linspace(xmin, xmax, 100)
-    p = norm.pdf(x, mu, std)
-    plt.plot(x, p, 'k', linewidth=2)
-    
-    plt.title("Distribución de los Retornos Anualizados")
-    plt.xlabel('Retorno Anualizado')
-    plt.ylabel('Densidad')
-    plt.grid(True)
-    plt.show()
-
-# Solicitar entrada del usuario
-tickers, weights, risk_free_rate = get_user_input()
-
-# Calcular métricas de la cartera inicial
-returns, portfolio_return, portfolio_volatility, correlation_matrix, market_returns, portfolio_returns = calculate_portfolio_metrics(tickers, weights)
-
-# Mostrar resultados de la cartera inicial
-plot_portfolio_data(portfolio_return, portfolio_volatility, correlation_matrix)
-
-# Calcular y mostrar el Ratio de Sharpe para la cartera inicial
-sharpe_ratio = calculate_sharpe_ratio(portfolio_return, portfolio_volatility, risk_free_rate)
-print(f"Ratio de Sharpe: {sharpe_ratio:.2f}")
-
-# Calcular y mostrar el Ratio de Sortino para la cartera inicial
-sortino_ratio = calculate_sortino_ratio(portfolio_returns, risk_free_rate)
-print(f"Ratio de Sortino: {sortino_ratio:.2f}")
-
-# Calcular y mostrar el Ratio de Treynor para la cartera inicial
-treynor_ratio = calculate_treynor_ratio(portfolio_returns, market_returns, risk_free_rate)
-print(f"Ratio de Treynor: {treynor_ratio:.2f}")
-
-# Optimizar la cartera
-optimal_weights = optimize_portfolio(returns[tickers], risk_free_rate)
-
-# Calcular métricas de la cartera óptima
-optimal_portfolio_returns = returns[tickers].dot(optimal_weights)
-optimal_return = optimal_portfolio_returns.mean() * 252
-optimal_volatility = optimal_portfolio_returns.std() * np.sqrt(252)
-
-# Calcular el Ratio de Sharpe para la cartera óptima
-optimal_sharpe_ratio = calculate_sharpe_ratio(optimal_return, optimal_volatility, risk_free_rate)
-
-# Calcular el Ratio de Sortino para la cartera óptima
-optimal_sortino_ratio = calculate_sortino_ratio(optimal_portfolio_returns, risk_free_rate)
-
-# Calcular el Ratio de Treynor para la cartera óptima
-optimal_treynor_ratio = calculate_treynor_ratio(optimal_portfolio_returns, market_returns, risk_free_rate)
-
-print("\nComposición óptima de la cartera:")
-for ticker, weight in zip(tickers, optimal_weights):
-    print(f"{ticker}: {weight:.2%}")
-
-print(f"\nRentabilidad media anualizada de la cartera óptima: {optimal_return * 100:.2f}%")
-print(f"Volatilidad anualizada de la cartera óptima: {optimal_volatility * 100:.2f}%")
-print(f"Ratio de Sharpe de la cartera óptima: {optimal_sharpe_ratio:.2f}")
-print(f"Ratio de Sortino de la cartera óptima: {optimal_sortino_ratio:.2f}")
-print(f"Ratio de Treynor de la cartera óptima: {optimal_treynor_ratio:.2f}")
-
-# Graficar CML y SML
-plot_cml_sml(portfolio_return, portfolio_volatility, market_returns, risk_free_rate)
-
-# Verificar normalidad de los retornos
-check_normality(returns[tickers])
+        st.write("Aquí puedes agregar análisis y gestión de carteras.")
 
 except Exception as e:
-    st.error(f"Error: {e}")
+    st.error(f'Error al obtener datos o generar gráficos: {e}')
