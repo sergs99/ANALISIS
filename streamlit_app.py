@@ -3,7 +3,6 @@ import yfinance as yf
 import plotly.graph_objs as go
 import pandas as pd
 from datetime import datetime, timedelta
-import ta
 import numpy as np
 from scipy.optimize import minimize
 
@@ -15,30 +14,39 @@ def get_stock_data(ticker, start_date, end_date):
     info = stock.info
     return hist, info
 
-Error: could not convert string to float: ''
-
 # Funciones adicionales para la gestión de carteras
 def get_user_input():
-    while True:
-        try:
-            tickers = st.text_input("Introduce los tickers de las acciones (separados por comas)").split(',')
-            weights = st.text_input("Introduce los pesos de las acciones (separados por comas, deben sumar 1)").split(',')
-            
-            tickers = [ticker.strip().upper() for ticker in tickers]
-            weights = np.array([float(weight.strip()) for weight in weights])
-
-            if not np.isclose(sum(weights), 1.0, atol=1e-5):
-                st.error("La suma de los pesos debe ser aproximadamente igual a 1.0.")
-                return None, None, None
-
-            risk_free_rate = float(st.text_input("Introduce la tasa libre de riesgo actual (como fracción, ej. 0.0234 para 2.34%)").strip())
-
-            return tickers, weights, risk_free_rate
+    try:
+        tickers = st.text_input("Introduce los tickers de las acciones (separados por comas)").split(',')
+        weights = st.text_input("Introduce los pesos de las acciones (separados por comas, deben sumar 1)").split(',')
         
-        except ValueError as e:
-            st.error(f"Error: {e}")
-            st.write("Por favor, ingresa los datos nuevamente.")
+        tickers = [ticker.strip().upper() for ticker in tickers]
+        weights = [weight.strip() for weight in weights]
+        
+        # Validar pesos y convertir a flotantes
+        try:
+            weights = np.array([float(weight) for weight in weights])
+        except ValueError:
+            st.error("Uno o más pesos no son números válidos.")
             return None, None, None
+        
+        if not np.isclose(sum(weights), 1.0, atol=1e-5):
+            st.error("La suma de los pesos debe ser aproximadamente igual a 1.0.")
+            return None, None, None
+
+        # Validar tasa libre de riesgo
+        try:
+            risk_free_rate = float(st.text_input("Introduce la tasa libre de riesgo actual (como fracción, ej. 0.0234 para 2.34%)").strip())
+        except ValueError:
+            st.error("La tasa libre de riesgo no es un número válido.")
+            return None, None, None
+
+        return tickers, weights, risk_free_rate
+    
+    except ValueError as e:
+        st.error(f"Error: {e}")
+        st.write("Por favor, ingresa los datos nuevamente.")
+        return None, None, None
 
 def calculate_portfolio_metrics(tickers, weights):
     end_date = datetime.today().strftime('%Y-%m-%d')
@@ -103,6 +111,9 @@ def optimize_portfolio(returns, risk_free_rate):
     return result.x
 
 def plot_portfolio_data(portfolio_return, portfolio_volatility, correlation_matrix):
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+
     fig, axes = plt.subplots(1, 2, figsize=(12, 6))
 
     axes[0].bar(["Rentabilidad", "Volatilidad"], [portfolio_return * 100, portfolio_volatility * 100], color=['blue', 'orange'])
