@@ -217,51 +217,59 @@ try:
 except Exception as e:
     st.error(f"Error: {e}")
 
-import streamlit as st
 import yfinance as yf
-import numpy as np
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy.stats import norm
 from scipy.optimize import minimize
 from datetime import datetime
+import streamlit as st
 
 def get_user_input():
-    st.subheader("Entrada de Datos para Gestión de Cartera")
-
-    tickers_input = st.text_input("Introduce los tickers de las acciones (separados por comas):", "AAPL,MSFT,GOOGL")
-    weights_input = st.text_input("Introduce los pesos de las acciones (separados por comas, deben sumar 1):", "0.4,0.3,0.3")
-    risk_free_rate = st.number_input("Introduce la tasa libre de riesgo actual (como fracción, ej. 0.0234 para 2.34%):", value=0.0234)
-
-    if st.button('Calcular'):
+    while True:
         try:
-            tickers = [ticker.strip().upper() for ticker in tickers_input.split(',')]
-            weights = np.array([float(weight.strip()) for weight in weights_input.split(',')])
+            tickers = st.text_input("Introduce los tickers de las acciones (separados por comas):").split(',')
+            weights = st.text_input("Introduce los pesos de las acciones (separados por comas, deben sumar 1):").split(',')
+            
+            tickers = [ticker.strip().upper() for ticker in tickers]
+            weights = np.array([float(weight.strip()) for weight in weights])
 
             if not np.isclose(sum(weights), 1.0, atol=1e-5):
-                st.error("La suma de los pesos debe ser aproximadamente igual a 1.0.")
-                return None, None, None
+                raise ValueError("La suma de los pesos debe ser aproximadamente igual a 1.0.")
+
+            risk_free_rate = float(st.text_input("Introduce la tasa libre de riesgo actual (como fracción, ej. 0.0234 para 2.34%):").strip())
 
             return tickers, weights, risk_free_rate
-
+        
         except ValueError as e:
             st.error(f"Error: {e}")
-            return None, None, None
+            st.warning("Por favor, ingresa los datos nuevamente.")
 
-    return None, None, None
+def download_data(tickers, start_date, end_date):
+    retries = 3
+    for attempt in range(retries):
+        try:
+            data = yf.download(tickers, start=start_date, end=end_date)['Adj Close']
+            if not data.empty:
+                return data
+        except Exception as e:
+            if attempt < retries - 1:
+                st.warning(f"Intento {attempt + 1} fallido. Reintentando... ({e})")
+            else:
+                st.error(f"Error al descargar datos: {e}")
+                return None
+    return None
 
 def calculate_portfolio_metrics(tickers, weights):
     end_date = datetime.today().strftime('%Y-%m-%d')
     tickers_with_market = tickers + ['^GSPC']
-    try:
-        data = yf.download(tickers_with_market, start='2020-01-01', end=end_date)['Adj Close']
-    except Exception as e:
-        st.error(f"Error al descargar datos: {e}")
-        return None, None, None, None, None, None
-
-    if data.empty:
-        st.error("No se descargaron datos para los tickers proporcionados.")
+    
+    # Intentar descargar los datos con reintentos
+    data = download_data(tickers_with_market, start='2020-01-01', end=end_date)
+    
+    if data is None:
         return None, None, None, None, None, None
 
     returns = data.pct_change().dropna()
@@ -314,17 +322,18 @@ def optimize_portfolio(returns, risk_free_rate):
     return result.x
 
 def plot_portfolio_data(portfolio_return, portfolio_volatility, correlation_matrix):
-    fig, axs = plt.subplots(1, 2, figsize=(12, 6))
+    plt.figure(figsize=(12, 6))
     
-    axs[0].bar(["Rentabilidad", "Volatilidad"], [portfolio_return * 100, portfolio_volatility * 100], color=['blue', 'orange'])
-    axs[0].set_title("Rentabilidad y Volatilidad")
-    axs[0].set_ylabel('Porcentaje')
+    plt.subplot(1, 2, 1)
+    plt.title("Rentabilidad y Volatilidad")
+    plt.bar(["Rentabilidad", "Volatilidad"], [portfolio_return * 100, portfolio_volatility * 100], color=['blue', 'orange'])
+    plt.ylabel('Porcentaje')
 
-    sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', vmin=-1, vmax=1, fmt='.2f', ax=axs[1])
-    axs[1].set_title("Matriz de Correlación")
-
+    plt.subplot(1, 2, 2)
+    plt.title("Matriz de Correlación")
+    sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', vmin=-1, vmax=1, fmt='.2f')
     plt.tight_layout()
-    st.pyplot(fig)
+    st.pyplot()
 
 def plot_cml_sml(portfolio_return, portfolio_volatility, market_returns, risk_free_rate):
     market_return = market_returns.mean() * 252
@@ -336,35 +345,36 @@ def plot_cml_sml(portfolio_return, portfolio_volatility, market_returns, risk_fr
     returns_sml = np.linspace(risk_free_rate, market_return * 1.5, 100)
     volatilities_sml = (returns_sml - risk_free_rate) / market_return * market_volatility
 
-    fig, ax = plt.subplots(figsize=(12, 8))
-    ax.plot(volatilities, returns_cml, label='Capital Market Line (CML)', color='blue')
-    ax.plot(volatilities_sml, returns_sml, label='Security Market Line (SML)', color='red')
-    ax.scatter(portfolio_volatility, portfolio_return, color='green', marker='o', s=100, label='Cartera')
-    ax.scatter(market_volatility, market_return, color='orange', marker='x', s=100, label='Mercado')
+    plt.figure(figsize=(12, 8))
+    plt.title("Capital Market Line (CML) y Security Market Line (SML)")
 
-    ax.set_title("Capital Market Line (CML) y Security Market Line (SML)")
-    ax.set_xlabel('Volatilidad')
-    ax.set_ylabel('Retorno')
-    ax.legend()
-    ax.grid(True)
-    st.pyplot(fig)
+    plt.plot(volatilities, returns_cml, label='Capital Market Line (CML)', color='blue')
+    plt.plot(volatilities_sml, returns_sml, label='Security Market Line (SML)', color='red')
+    plt.scatter(portfolio_volatility, portfolio_return, color='green', marker='o', s=100, label='Cartera')
+    plt.scatter(market_volatility, market_return, color='orange', marker='x', s=100, label='Mercado')
+
+    plt.xlabel('Volatilidad')
+    plt.ylabel('Retorno')
+    plt.legend()
+    plt.grid(True)
+    st.pyplot()
 
 def check_normality(returns):
-    fig, ax = plt.subplots(figsize=(12, 6))
+    plt.figure(figsize=(12, 6))
     
-    sns.histplot(returns.mean(axis=1) * 252, kde=True, stat='density', linewidth=0, bins=50, ax=ax)
+    sns.histplot(returns.mean(axis=1) * 252, kde=True, stat='density', linewidth=0, bins=50)
     
     mu, std = norm.fit(returns.mean(axis=1) * 252)
-    xmin, xmax = ax.get_xlim()
+    xmin, xmax = plt.xlim()
     x = np.linspace(xmin, xmax, 100)
     p = norm.pdf(x, mu, std)
-    ax.plot(x, p, 'k', linewidth=2)
+    plt.plot(x, p, 'k', linewidth=2)
     
-    ax.set_title("Distribución de los Retornos Anualizados")
-    ax.set_xlabel('Retorno Anualizado')
-    ax.set_ylabel('Densidad')
-    ax.grid(True)
-    st.pyplot(fig)
+    plt.title("Distribución de los Retornos Anualizados")
+    plt.xlabel('Retorno Anualizado')
+    plt.ylabel('Densidad')
+    plt.grid(True)
+    st.pyplot()
 
 def main():
     st.sidebar.title("Menú")
@@ -422,7 +432,7 @@ def main():
                     st.write(f"Ratio de Treynor de la cartera óptima: {optimal_treynor_ratio:.2f}")
 
                     # Graficar CML y SML
-                    plot_cml_sml(portfolio_return, portfolio_volatility, market_returns, risk_free_rate)
+                    plot_cml_sml(optimal_return, optimal_volatility, market_returns, risk_free_rate)
 
                     # Verificar normalidad de los retornos
                     check_normality(returns[tickers])
@@ -437,3 +447,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
