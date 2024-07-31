@@ -322,5 +322,8 @@ if menu != 'Selecciona una opción':
             st.subheader('Gestión de Carteras')
             st.write('Esta sección está en desarrollo. Aquí puedes gestionar tus carteras.')
 
-    else:
-        st.write('Selecciona una opción del menú para mostrar el contenido.')
+    except Exception as e:
+        st.error(f"Ha ocurrido un error: {e}")
+
+else:
+    st.write('Selecciona una opción del menú para mostrar el contenido.')
