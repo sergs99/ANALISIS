@@ -228,24 +228,30 @@ from datetime import datetime
 import streamlit as st
 
 def get_user_input():
-    while True:
-        try:
-            tickers = st.text_input("Introduce los tickers de las acciones (separados por comas):").split(',')
-            weights = st.text_input("Introduce los pesos de las acciones (separados por comas, deben sumar 1):").split(',')
-            
-            tickers = [ticker.strip().upper() for ticker in tickers]
-            weights = np.array([float(weight.strip()) for weight in weights])
+    # Identificadores únicos para widgets
+    tickers_input = st.text_input("Introduce los tickers de las acciones (separados por comas):", key="tickers")
+    weights_input = st.text_input("Introduce los pesos de las acciones (separados por comas, deben sumar 1):", key="weights")
+    risk_free_rate_input = st.text_input("Introduce la tasa libre de riesgo actual (como fracción, ej. 0.0234 para 2.34%):", key="risk_free_rate")
+    
+    try:
+        if tickers_input and weights_input and risk_free_rate_input:
+            tickers = [ticker.strip().upper() for ticker in tickers_input.split(',')]
+            weights = np.array([float(weight.strip()) for weight in weights_input.split(',')])
+            risk_free_rate = float(risk_free_rate_input.strip())
 
             if not np.isclose(sum(weights), 1.0, atol=1e-5):
-                raise ValueError("La suma de los pesos debe ser aproximadamente igual a 1.0.")
-
-            risk_free_rate = float(st.text_input("Introduce la tasa libre de riesgo actual (como fracción, ej. 0.0234 para 2.34%):").strip())
+                st.error("La suma de los pesos debe ser aproximadamente igual a 1.0.")
+                return None, None, None
 
             return tickers, weights, risk_free_rate
-        
-        except ValueError as e:
-            st.error(f"Error: {e}")
-            st.warning("Por favor, ingresa los datos nuevamente.")
+        else:
+            st.warning("Por favor, llena todos los campos.")
+            return None, None, None
+            
+    except ValueError as e:
+        st.error(f"Error: {e}")
+        st.warning("Por favor, ingresa los datos nuevamente.")
+        return None, None, None
 
 def download_data(tickers, start_date, end_date):
     retries = 3
@@ -406,36 +412,35 @@ def main():
                 # Optimizar la cartera
                 optimal_weights = optimize_portfolio(returns[tickers], risk_free_rate)
 
-                if optimal_weights is not None:
-                    # Calcular métricas de la cartera óptima
-                    optimal_portfolio_returns = returns[tickers].dot(optimal_weights)
-                    optimal_return = optimal_portfolio_returns.mean() * 252
-                    optimal_volatility = optimal_portfolio_returns.std() * np.sqrt(252)
+                # Calcular métricas de la cartera óptima
+                optimal_portfolio_returns = returns[tickers].dot(optimal_weights)
+                optimal_return = optimal_portfolio_returns.mean() * 252
+                optimal_volatility = optimal_portfolio_returns.std() * np.sqrt(252)
 
-                    # Calcular el Ratio de Sharpe para la cartera óptima
-                    optimal_sharpe_ratio = calculate_sharpe_ratio(optimal_return, optimal_volatility, risk_free_rate)
+                # Calcular el Ratio de Sharpe para la cartera óptima
+                optimal_sharpe_ratio = calculate_sharpe_ratio(optimal_return, optimal_volatility, risk_free_rate)
 
-                    # Calcular el Ratio de Sortino para la cartera óptima
-                    optimal_sortino_ratio = calculate_sortino_ratio(optimal_portfolio_returns, risk_free_rate)
+                # Calcular el Ratio de Sortino para la cartera óptima
+                optimal_sortino_ratio = calculate_sortino_ratio(optimal_portfolio_returns, risk_free_rate)
 
-                    # Calcular el Ratio de Treynor para la cartera óptima
-                    optimal_treynor_ratio = calculate_treynor_ratio(optimal_portfolio_returns, market_returns, risk_free_rate)
+                # Calcular el Ratio de Treynor para la cartera óptima
+                optimal_treynor_ratio = calculate_treynor_ratio(optimal_portfolio_returns, market_returns, risk_free_rate)
 
-                    st.write("Composición óptima de la cartera:")
-                    for ticker, weight in zip(tickers, optimal_weights):
-                        st.write(f"{ticker}: {weight:.2%}")
+                st.write("Composición óptima de la cartera:")
+                for ticker, weight in zip(tickers, optimal_weights):
+                    st.write(f"{ticker}: {weight:.2%}")
 
-                    st.write(f"Rentabilidad media anualizada de la cartera óptima: {optimal_return * 100:.2f}%")
-                    st.write(f"Volatilidad anualizada de la cartera óptima: {optimal_volatility * 100:.2f}%")
-                    st.write(f"Ratio de Sharpe de la cartera óptima: {optimal_sharpe_ratio:.2f}")
-                    st.write(f"Ratio de Sortino de la cartera óptima: {optimal_sortino_ratio:.2f}")
-                    st.write(f"Ratio de Treynor de la cartera óptima: {optimal_treynor_ratio:.2f}")
+                st.write(f"Rentabilidad media anualizada de la cartera óptima: {optimal_return * 100:.2f}%")
+                st.write(f"Volatilidad anualizada de la cartera óptima: {optimal_volatility * 100:.2f}%")
+                st.write(f"Ratio de Sharpe de la cartera óptima: {optimal_sharpe_ratio:.2f}")
+                st.write(f"Ratio de Sortino de la cartera óptima: {optimal_sortino_ratio:.2f}")
+                st.write(f"Ratio de Treynor de la cartera óptima: {optimal_treynor_ratio:.2f}")
 
-                    # Graficar CML y SML
-                    plot_cml_sml(optimal_return, optimal_volatility, market_returns, risk_free_rate)
+                # Graficar CML y SML
+                plot_cml_sml(optimal_return, optimal_volatility, market_returns, risk_free_rate)
 
-                    # Verificar normalidad de los retornos
-                    check_normality(returns[tickers])
+                # Verificar normalidad de los retornos
+                check_normality(returns[tickers])
 
     elif app_mode == "Análisis Técnico":
         st.subheader("Análisis Técnico")
@@ -447,4 +452,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
