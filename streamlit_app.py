@@ -79,7 +79,7 @@ try:
     data = calculate_technical_indicators(hist)
 
     # Tabs
-    selected_tab = st.selectbox('Seleccionar pestaña', ['Análisis Técnico', 'Fundamental'])
+    selected_tab = st.selectbox('Seleccionar pestaña', ['Análisis Técnico', 'Fundamental', 'Gestión de Carteras'])
 
     if selected_tab == 'Análisis Técnico':
         # Gráfico de Velas
@@ -213,6 +213,41 @@ try:
                 st.write(pd.DataFrame(list(metrics.items()), columns=['Métrica', 'Valor']).set_index('Métrica'))
             else:
                 st.write(metrics)
+
+    elif selected_tab == 'Gestión de Carteras':
+        st.subheader("Gestión de Carteras")
+        st.write("Esta sección está destinada a gestionar y visualizar múltiples activos en una cartera.")
+
+        # Aquí puedes agregar widgets para ingresar diferentes activos y calcular métricas de cartera.
+        # Ejemplo de widget para ingresar una lista de tickers
+        portfolio_tickers = st.text_input("Ingrese los símbolos bursátiles separados por coma (ejemplo: AAPL, MSFT, TSLA)", value='AAPL, MSFT, TSLA')
+
+        if portfolio_tickers:
+            tickers = [ticker.strip() for ticker in portfolio_tickers.split(',')]
+            st.write(f"Análisis para los tickers: {', '.join(tickers)}")
+            # Aquí deberías implementar la lógica para analizar una cartera de tickers
+            # Esto podría incluir la obtención de datos para cada ticker, cálculo de métricas de cartera, etc.
+            # Ejemplo de mostrar gráficos de los tickers ingresados
+            for ticker in tickers:
+                try:
+                    hist, info = get_stock_data(ticker, start_date, end_date)
+                    st.write(f"Datos para {ticker}")
+                    # Mostrar gráficos para cada ticker (puedes usar el mismo código de gráficos anteriores)
+                    price_fig = go.Figure(data=[go.Candlestick(
+                        x=hist.index,
+                        open=hist['Open'],
+                        high=hist['High'],
+                        low=hist['Low'],
+                        close=hist['Close'],
+                        increasing_line_color='lime',
+                        decreasing_line_color='red',
+                        name='Candlestick'
+                    )])
+                    price_fig = update_layout(price_fig, f'Gráfico de Velas de {ticker}', 'Precio')
+                    st.plotly_chart(price_fig)
+
+                except Exception as e:
+                    st.error(f"Error al obtener datos para {ticker}: {e}")
 
 except Exception as e:
     st.error(f"Error: {e}")
