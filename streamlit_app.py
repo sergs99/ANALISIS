@@ -4,6 +4,12 @@ import plotly.graph_objs as go
 import pandas as pd
 from datetime import datetime, timedelta
 import ta
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from scipy.stats import norm
+from scipy.optimize import minimize
+import plotly.graph_objects as go
 
 # Función para obtener datos históricos y la información del stock
 @st.cache_data
@@ -321,51 +327,98 @@ if menu != 'Selecciona una opción':
         elif menu == 'Gestión de Carteras':
             st.subheader('Gestión de Carteras')
 
-            # Ejemplo básico de una cartera diversificada
-            tickers = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA']
-            weights = [0.2, 0.2, 0.2, 0.2, 0.2]  # Pesos iguales para simplificar
+           # Funciones de ayuda
+@st.cache_data
+def get_stock_data(tickers, start_date, end_date):
+    data = yf.download(tickers, start=start_date, end=end_date)['Adj Close']
+    return data
 
-            # Descargar datos
-            stock_data = {ticker: yf.download(ticker, start=start_date, end=end_date) for ticker in tickers}
-            returns = {ticker: data['Adj Close'].pct_change().dropna() for ticker, data in stock_data.items()}
+def calculate_portfolio_metrics(tickers, weights, start_date, end_date):
+    tickers_with_market = tickers + ['^GSPC']
+    data = get_stock_data(tickers_with_market, start_date, end_date)
+    returns = data.pct_change().dropna()
 
-            # Calcular retornos diarios de la cartera
-            portfolio_returns = sum(weights[i] * returns[ticker] for i, ticker in enumerate(tickers))
+    market_returns = returns['^GSPC']
+    portfolio_returns = returns[tickers].dot(weights)
+    
+    annualized_return = portfolio_returns.mean() * 252
+    annualized_volatility = portfolio_returns.std() * np.sqrt(252)
+    
+    correlation_matrix = returns.corr()
 
-            # Calcular retornos acumulativos
-            cumulative_returns = (1 + portfolio_returns).cumprod()
+    return returns, annualized_return, annualized_volatility, correlation_matrix, market_returns, portfolio_returns
 
-            # Graficar retornos acumulativos
-            cumulative_returns_fig = go.Figure()
-            cumulative_returns_fig.add_trace(go.Scatter(x=cumulative_returns.index, y=cumulative_returns, mode='lines', name='Retornos Acumulativos'))
-            cumulative_returns_fig.update_layout(
-                title='Retornos Acumulativos de la Cartera',
-                title_font=dict(size=18, color='white'),
-                xaxis_title='Fecha',
-                xaxis_title_font=dict(size=14, color='white'),
-                yaxis_title='Retorno Acumulativo',
-                yaxis_title_font=dict(size=14, color='white'),
-                plot_bgcolor='black',
-                paper_bgcolor='black',
-                font=dict(color='white'),
-                xaxis=dict(gridcolor='grey', zerolinecolor='grey'),
-                yaxis=dict(gridcolor='grey', zerolinecolor='grey')
-            )
-            st.plotly_chart(cumulative_returns_fig)
+def plot_portfolio_data(portfolio_return, portfolio_volatility, correlation_matrix):
+    fig, ax = plt.subplots(1, 2, figsize=(12, 6))
+    
+    ax[0].bar(["Rentabilidad", "Volatilidad"], [portfolio_return * 100, portfolio_volatility * 100], color=['blue', 'orange'])
+    ax[0].set_title("Rentabilidad y Volatilidad")
+    ax[0].set_ylabel('Porcentaje')
 
-            # Graficar distribución de activos
-            asset_allocation_fig = go.Figure(data=[go.Pie(labels=tickers, values=weights, hole=0.4)])
-            asset_allocation_fig.update_layout(
-                title='Distribución de Activos de la Cartera',
-                title_font=dict(size=18, color='white'),
-                plot_bgcolor='black',
-                paper_bgcolor='black',
-                font=dict(color='white')
-            )
-            st.plotly_chart(asset_allocation_fig)
+    sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', vmin=-1, vmax=1, fmt='.2f', ax=ax[1])
+    ax[1].set_title("Matriz de Correlación")
+    
+    st.pyplot(fig)
 
+def plot_cumulative_returns(portfolio_returns):
+    cumulative_returns = (1 + portfolio_returns).cumprod()
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=cumulative_returns.index, y=cumulative_returns, mode='lines', name='Retornos Acumulativos'))
+    fig.update_layout(
+        title='Retornos Acumulativos de la Cartera',
+        title_font=dict(size=18, color='white'),
+        xaxis_title='Fecha',
+        xaxis_title_font=dict(size=14, color='white'),
+        yaxis_title='Retorno Acumulativo',
+        yaxis_title_font=dict(size=14, color='white'),
+        plot_bgcolor='black',
+        paper_bgcolor='black',
+        font=dict(color='white'),
+        xaxis=dict(gridcolor='grey', zerolinecolor='grey'),
+        yaxis=dict(gridcolor='grey', zerolinecolor='grey')
+    )
+    st.plotly_chart(fig)
+
+def plot_asset_allocation(tickers, weights):
+    fig = go.Figure(data=[go.Pie(labels=tickers, values=weights, hole=0.4)])
+    fig.update_layout(
+        title='Distribución de Activos de la Cartera',
+        title_font=dict(size=18, color='white'),
+        plot_bgcolor='black',
+        paper_bgcolor='black',
+        font=dict(color='white')
+    )
+    st.plotly_chart(fig)
+
+# Interfaz de usuario
+st.title('Gestión de Carteras')
+st.sidebar.title('Configuración de la Cartera')
+
+tickers = st.sidebar.text_input('Tickers (separados por comas)', 'AAPL, MSFT, GOOGL, AMZN, TSLA').split(',')
+weights = st.sidebar.text_input('Pesos (separados por comas, deben sumar 1)', '0.2, 0.2, 0.2, 0.2, 0.2').split(',')
+weights = np.array([float(weight.strip()) for weight in weights])
+risk_free_rate = st.sidebar.number_input('Tasa libre de riesgo (ej. 0.0234 para 2.34%)', min_value=0.0, max_value=1.0, value=0.0234)
+
+if np.isclose(sum(weights), 1.0, atol=1e-5):
+    start_date = '2020-01-01'
+    end_date = datetime.today().strftime('%Y-%m-%d')
+    
+    try:
+        returns, portfolio_return, portfolio_volatility, correlation_matrix, market_returns, portfolio_returns = calculate_portfolio_metrics(tickers, weights, start_date, end_date)
+        
+        st.subheader('Resultados de la Cartera Inicial')
+        plot_portfolio_data(portfolio_return, portfolio_volatility, correlation_matrix)
+
+        sharpe_ratio = (portfolio_return - risk_free_rate) / portfolio_volatility
+        st.write(f"Ratio de Sharpe: {sharpe_ratio:.2f}")
+
+        plot_cumulative_returns(portfolio_returns)
+        plot_asset_allocation(tickers, weights)
+        
     except Exception as e:
         st.error(f"Ha ocurrido un error: {e}")
+else:
+    st.error("La suma de los pesos debe ser aproximadamente igual a 1.0.")
 
 else:
     st.write('Selecciona una opción del menú para mostrar el contenido.')
