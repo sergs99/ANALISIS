@@ -3,3 +3,7 @@ yfinance
 pandas
 plotly
 ta
+numpy
+matplotlib
+seaborn
+scipy
