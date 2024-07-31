@@ -320,7 +320,49 @@ if menu != 'Selecciona una opción':
 
         elif menu == 'Gestión de Carteras':
             st.subheader('Gestión de Carteras')
-            st.write('Esta sección está en desarrollo. Aquí puedes gestionar tus carteras.')
+
+            # Ejemplo básico de una cartera diversificada
+            tickers = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA']
+            weights = [0.2, 0.2, 0.2, 0.2, 0.2]  # Pesos iguales para simplificar
+
+            # Descargar datos
+            stock_data = {ticker: yf.download(ticker, start=start_date, end=end_date) for ticker in tickers}
+            returns = {ticker: data['Adj Close'].pct_change().dropna() for ticker, data in stock_data.items()}
+
+            # Calcular retornos diarios de la cartera
+            portfolio_returns = sum(weights[i] * returns[ticker] for i, ticker in enumerate(tickers))
+
+            # Calcular retornos acumulativos
+            cumulative_returns = (1 + portfolio_returns).cumprod()
+
+            # Graficar retornos acumulativos
+            cumulative_returns_fig = go.Figure()
+            cumulative_returns_fig.add_trace(go.Scatter(x=cumulative_returns.index, y=cumulative_returns, mode='lines', name='Retornos Acumulativos'))
+            cumulative_returns_fig.update_layout(
+                title='Retornos Acumulativos de la Cartera',
+                title_font=dict(size=18, color='white'),
+                xaxis_title='Fecha',
+                xaxis_title_font=dict(size=14, color='white'),
+                yaxis_title='Retorno Acumulativo',
+                yaxis_title_font=dict(size=14, color='white'),
+                plot_bgcolor='black',
+                paper_bgcolor='black',
+                font=dict(color='white'),
+                xaxis=dict(gridcolor='grey', zerolinecolor='grey'),
+                yaxis=dict(gridcolor='grey', zerolinecolor='grey')
+            )
+            st.plotly_chart(cumulative_returns_fig)
+
+            # Graficar distribución de activos
+            asset_allocation_fig = go.Figure(data=[go.Pie(labels=tickers, values=weights, hole=0.4)])
+            asset_allocation_fig.update_layout(
+                title='Distribución de Activos de la Cartera',
+                title_font=dict(size=18, color='white'),
+                plot_bgcolor='black',
+                paper_bgcolor='black',
+                font=dict(color='white')
+            )
+            st.plotly_chart(asset_allocation_fig)
 
     except Exception as e:
         st.error(f"Ha ocurrido un error: {e}")
