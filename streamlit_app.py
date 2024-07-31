@@ -54,13 +54,13 @@ st.title('Dashboard Financiero')
 # Menú de navegación
 selected_option = st.sidebar.selectbox('Seleccionar opción', ['Análisis Técnico', 'Análisis Fundamental', 'Gestión de Carteras'])
 
-if selected_option in ['Análisis Técnico', 'Análisis Fundamental']:
-    # Entradas de usuario
-    ticker = st.sidebar.text_input("Símbolo bursátil:", value='AAPL')
-    start_date = st.sidebar.date_input('Fecha de inicio', (datetime.today() - timedelta(days=252)).date())
-    end_date = st.sidebar.date_input('Fecha de fin', datetime.today().date())
+try:
+    if selected_option in ['Análisis Técnico', 'Análisis Fundamental']:
+        # Entradas de usuario
+        ticker = st.sidebar.text_input("Símbolo bursátil:", value='AAPL')
+        start_date = st.sidebar.date_input('Fecha de inicio', (datetime.today() - timedelta(days=252)).date())
+        end_date = st.sidebar.date_input('Fecha de fin', datetime.today().date())
 
-    try:
         hist, info = get_stock_data(ticker, start_date, end_date)
         data = calculate_technical_indicators(hist)
 
