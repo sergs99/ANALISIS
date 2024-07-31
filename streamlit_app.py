@@ -9,31 +9,34 @@ from datetime import datetime
 import streamlit as st
 
 def get_user_input():
-    while True:
-        try:
-            tickers = st.text_input("Introduce los tickers de las acciones (separados por comas):").split(',')
-            weights = st.text_input("Introduce los pesos de las acciones (separados por comas, deben sumar 1):").split(',')
-            
-            tickers = [ticker.strip().upper() for ticker in tickers]
-            weights = np.array([float(weight.strip()) for weight in weights])
-
-            if not np.isclose(sum(weights), 1.0, atol=1e-5):
-                raise ValueError("La suma de los pesos debe ser aproximadamente igual a 1.0.")
-
-            risk_free_rate = float(st.text_input("Introduce la tasa libre de riesgo actual (como fracción, ej. 0.0234 para 2.34%):").strip())
-
-            return tickers, weights, risk_free_rate
+    try:
+        tickers_input = st.text_input("Introduce los tickers de las acciones (separados por comas):")
+        weights_input = st.text_input("Introduce los pesos de las acciones (separados por comas, deben sumar 1):")
+        risk_free_rate_input = st.text_input("Introduce la tasa libre de riesgo actual (como fracción, ej. 0.0234 para 2.34%):")
         
-        except ValueError as e:
-            st.error(f"Error: {e}")
-            st.warning("Por favor, ingresa los datos nuevamente.")
+        if not tickers_input or not weights_input or not risk_free_rate_input:
+            st.warning("Por favor, completa todos los campos.")
             return None, None, None
+        
+        tickers = [ticker.strip().upper() for ticker in tickers_input.split(',')]
+        weights = np.array([float(weight.strip()) for weight in weights_input.split(',')])
+        risk_free_rate = float(risk_free_rate_input.strip())
+
+        if not np.isclose(sum(weights), 1.0, atol=1e-5):
+            st.error("La suma de los pesos debe ser aproximadamente igual a 1.0.")
+            return None, None, None
+
+        return tickers, weights, risk_free_rate
+    
+    except ValueError as e:
+        st.error(f"Error en los datos proporcionados: {e}")
+        return None, None, None
 
 def calculate_portfolio_metrics(tickers, weights):
     end_date = datetime.today().strftime('%Y-%m-%d')
     tickers_with_market = tickers + ['^GSPC']
     try:
-        data = yf.download(tickers_with_market, start='2022-01-01', end=end_date, group_by='ticker')['Adj Close']
+        data = yf.download(tickers_with_market, start='2022-01-01', end=end_date)['Adj Close']
     except Exception as e:
         st.error(f"Error al descargar datos: {e}")
         st.error("Asegúrate de que los tickers son válidos y que tienes una conexión a Internet estable.")
@@ -59,21 +62,18 @@ def calculate_portfolio_metrics(tickers, weights):
     return returns, annualized_return, annualized_volatility, correlation_matrix, market_returns, portfolio_returns
 
 def calculate_sharpe_ratio(portfolio_return, portfolio_volatility, risk_free_rate):
-    sharpe_ratio = (portfolio_return - risk_free_rate) / portfolio_volatility
-    return sharpe_ratio
+    return (portfolio_return - risk_free_rate) / portfolio_volatility
 
 def calculate_sortino_ratio(portfolio_returns, risk_free_rate):
     downside_risk = np.sqrt(np.mean(np.minimum(0, portfolio_returns - risk_free_rate / 252) ** 2) * 252)
     portfolio_return = portfolio_returns.mean() * 252
-    sortino_ratio = (portfolio_return - risk_free_rate) / downside_risk
-    return sortino_ratio
+    return (portfolio_return - risk_free_rate) / downside_risk
 
 def calculate_treynor_ratio(portfolio_returns, market_returns, risk_free_rate):
     portfolio_return = portfolio_returns.mean() * 252
     market_return = market_returns.mean() * 252
     beta = np.cov(portfolio_returns, market_returns)[0, 1] / np.var(market_returns)
-    treynor_ratio = (portfolio_return - risk_free_rate) / beta
-    return treynor_ratio
+    return (portfolio_return - risk_free_rate) / beta
 
 def optimize_portfolio(returns, risk_free_rate):
     def objective(weights):
@@ -150,7 +150,7 @@ def check_normality(returns):
 # Solicitar entrada del usuario
 tickers, weights, risk_free_rate = get_user_input()
 
-if tickers and weights and risk_free_rate is not None:
+if tickers is not None and weights is not None and risk_free_rate is not None:
     # Calcular métricas de la cartera inicial
     returns, portfolio_return, portfolio_volatility, correlation_matrix, market_returns, portfolio_returns = calculate_portfolio_metrics(tickers, weights)
 
