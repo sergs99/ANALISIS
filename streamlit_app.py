@@ -50,6 +50,26 @@ def calculate_technical_indicators(hist):
 st.set_page_config(page_title="Dashboard Financiero", layout="wide")
 
 st.title('Dashboard Financiero')
+st.markdown("""
+    <style>
+    .stApp {
+        font-family: Arial, sans-serif;
+    }
+    .stTitle {
+        color: #003366;
+        font-size: 2em;
+        font-weight: bold;
+    }
+    .stSubheader {
+        color: #004080;
+        font-size: 1.5em;
+        font-weight: bold;
+    }
+    .stTable {
+        font-size: 1em;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
 # Entradas de usuario
 ticker = st.text_input("Símbolo bursátil:", value='AAPL')
@@ -81,7 +101,10 @@ try:
             xaxis_title='Fecha',
             yaxis_title='Precio',
             xaxis_rangeslider_visible=False,
-            template='plotly_dark'
+            template='plotly_white',
+            title_font=dict(size=22, color='#003366'),
+            xaxis_title_font=dict(size=18, color='#003366'),
+            yaxis_title_font=dict(size=18, color='#003366')
         )
         st.plotly_chart(price_fig)
 
@@ -92,7 +115,10 @@ try:
             title=f'Volumen de Negociación de {ticker}',
             xaxis_title='Fecha',
             yaxis_title='Volumen',
-            template='plotly_dark'
+            template='plotly_white',
+            title_font=dict(size=22, color='#003366'),
+            xaxis_title_font=dict(size=18, color='#003366'),
+            yaxis_title_font=dict(size=18, color='#003366')
         )
         st.plotly_chart(volume_fig)
 
@@ -115,7 +141,10 @@ try:
             title=f'Bandas de Bollinger de {ticker}',
             xaxis_title='Fecha',
             yaxis_title='Precio',
-            template='plotly_dark'
+            template='plotly_white',
+            title_font=dict(size=22, color='#003366'),
+            xaxis_title_font=dict(size=18, color='#003366'),
+            yaxis_title_font=dict(size=18, color='#003366')
         )
         st.plotly_chart(bollinger_fig)
 
@@ -128,32 +157,41 @@ try:
             title=f'Índice de Fuerza Relativa (RSI) de {ticker}',
             xaxis_title='Fecha',
             yaxis_title='RSI',
-            template='plotly_dark'
+            template='plotly_white',
+            title_font=dict(size=22, color='#003366'),
+            xaxis_title_font=dict(size=18, color='#003366'),
+            yaxis_title_font=dict(size=18, color='#003366')
         )
         st.plotly_chart(rsi_fig)
 
         # Oscilador Estocástico
         stochastic_fig = go.Figure()
         stochastic_fig.add_trace(go.Scatter(x=data.index, y=data['Stoch_K'], mode='lines', name='%K', line=dict(color='yellow')))
-        stochastic_fig.add_trace(go.Scatter(x=data.index, y=data['Stoch_D'], mode='lines', name='%D', line=dict(color='lightcoral')))
+        stochastic_fig.add_trace(go.Scatter(x=data.index, y=data['Stoch_D'], mode='lines', name='%D', line=dict(color='orange')))
         stochastic_fig.update_layout(
             title=f'Oscilador Estocástico de {ticker}',
             xaxis_title='Fecha',
             yaxis_title='Valor',
-            template='plotly_dark'
+            template='plotly_white',
+            title_font=dict(size=22, color='#003366'),
+            xaxis_title_font=dict(size=18, color='#003366'),
+            yaxis_title_font=dict(size=18, color='#003366')
         )
         st.plotly_chart(stochastic_fig)
 
         # MACD
         macd_fig = go.Figure()
         macd_fig.add_trace(go.Scatter(x=data.index, y=data['MACD'], mode='lines', name='MACD', line=dict(color='blue')))
-        macd_fig.add_trace(go.Scatter(x=data.index, y=data['MACD_Signal'], mode='lines', name='MACD Signal', line=dict(color='orange')))
-        macd_fig.add_trace(go.Bar(x=data.index, y=data['MACD_Histogram'], name='MACD Histogram', marker_color='rgba(255, 87, 34, 0.8)'))
+        macd_fig.add_trace(go.Scatter(x=data.index, y=data['MACD_Signal'], mode='lines', name='MACD Signal', line=dict(color='red')))
+        macd_fig.add_trace(go.Scatter(x=data.index, y=data['MACD_Histogram'], mode='lines', name='Histograma MACD', line=dict(color='green')))
         macd_fig.update_layout(
             title=f'MACD de {ticker}',
             xaxis_title='Fecha',
             yaxis_title='Valor',
-            template='plotly_dark'
+            template='plotly_white',
+            title_font=dict(size=22, color='#003366'),
+            xaxis_title_font=dict(size=18, color='#003366'),
+            yaxis_title_font=dict(size=18, color='#003366')
         )
         st.plotly_chart(macd_fig)
 
@@ -164,7 +202,10 @@ try:
             title=f'Momentum de {ticker}',
             xaxis_title='Fecha',
             yaxis_title='Valor',
-            template='plotly_dark'
+            template='plotly_white',
+            title_font=dict(size=22, color='#003366'),
+            xaxis_title_font=dict(size=18, color='#003366'),
+            yaxis_title_font=dict(size=18, color='#003366')
         )
         st.plotly_chart(momentum_fig)
 
@@ -177,7 +218,10 @@ try:
             title=f'ADX de {ticker}',
             xaxis_title='Fecha',
             yaxis_title='ADX',
-            template='plotly_dark'
+            template='plotly_white',
+            title_font=dict(size=22, color='#003366'),
+            xaxis_title_font=dict(size=18, color='#003366'),
+            yaxis_title_font=dict(size=18, color='#003366')
         )
         st.plotly_chart(adx_fig)
 
@@ -190,7 +234,10 @@ try:
             title=f'Índice de Canal de Commodities (CCI) de {ticker}',
             xaxis_title='Fecha',
             yaxis_title='CCI',
-            template='plotly_dark'
+            template='plotly_white',
+            title_font=dict(size=22, color='#003366'),
+            xaxis_title_font=dict(size=18, color='#003366'),
+            yaxis_title_font=dict(size=18, color='#003366')
         )
         st.plotly_chart(cci_fig)
 
@@ -201,7 +248,10 @@ try:
             title=f'On-Balance Volume (OBV) de {ticker}',
             xaxis_title='Fecha',
             yaxis_title='OBV',
-            template='plotly_dark'
+            template='plotly_white',
+            title_font=dict(size=22, color='#003366'),
+            xaxis_title_font=dict(size=18, color='#003366'),
+            yaxis_title_font=dict(size=18, color='#003366')
         )
         st.plotly_chart(obv_fig)
 
@@ -212,7 +262,10 @@ try:
             title=f'Precio Promedio Ponderado por Volumen (VWAP) de {ticker}',
             xaxis_title='Fecha',
             yaxis_title='VWAP',
-            template='plotly_dark'
+            template='plotly_white',
+            title_font=dict(size=22, color='#003366'),
+            xaxis_title_font=dict(size=18, color='#003366'),
+            yaxis_title_font=dict(size=18, color='#003366')
         )
         st.plotly_chart(vwap_fig)
 
@@ -256,7 +309,9 @@ try:
         for category, metrics in fundamental_data.items():
             st.write(f"**{category}:**")
             if isinstance(metrics, dict):
-                st.write(pd.DataFrame(list(metrics.items()), columns=['Métrica', 'Valor']).set_index('Métrica'))
+                st.write(pd.DataFrame(list(metrics.items()), columns=['Métrica', 'Valor']).set_index('Métrica').style.set_table_styles(
+                    [{'selector': 'thead th', 'props': [('background-color', '#003366'), ('color', 'white')]}]
+                ))
             else:
                 st.write(metrics)
 
