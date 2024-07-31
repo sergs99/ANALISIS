@@ -67,6 +67,7 @@ st.set_page_config(page_title="Dashboard Financiero", layout="wide")
 # Selección de pestaña
 selected_option = st.sidebar.selectbox('Seleccionar Sección', ['Análisis Técnico', 'Análisis Fundamental', 'Gestión de Carteras'])
 
+# Control de flujo según la opción seleccionada
 if selected_option == 'Análisis Técnico' or selected_option == 'Análisis Fundamental':
     # Entradas de usuario para análisis
     ticker = st.text_input("Símbolo bursátil:", value='AAPL')
@@ -160,8 +161,8 @@ if selected_option == 'Análisis Técnico' or selected_option == 'Análisis Fund
             # MACD
             macd_fig = go.Figure()
             macd_fig.add_trace(go.Scatter(x=data.index, y=data['MACD'], mode='lines', name='MACD', line=dict(color='blue')))
-            macd_fig.add_trace(go.Scatter(x=data.index, y=data['MACD_Signal'], mode='lines', name='MACD Signal', line=dict(color='orange')))
-            macd_fig.add_trace(go.Bar(x=data.index, y=data['MACD_Histogram'], name='MACD Histogram', marker_color='rgba(255, 87, 34, 0.8)'))
+            macd_fig.add_trace(go.Scatter(x=data.index, y=data['MACD_Signal'], mode='lines', name='MACD Señal', line=dict(color='red')))
+            macd_fig.add_trace(go.Bar(x=data.index, y=data['MACD_Histogram'], name='Histograma MACD', marker_color='rgba(255, 87, 34, 0.8)'))
             macd_fig.update_layout(
                 title=f'MACD de {ticker}',
                 xaxis_title='Fecha',
@@ -176,7 +177,7 @@ if selected_option == 'Análisis Técnico' or selected_option == 'Análisis Fund
             momentum_fig.update_layout(
                 title=f'Momentum de {ticker}',
                 xaxis_title='Fecha',
-                yaxis_title='Valor',
+                yaxis_title='Momentum',
                 template='plotly_dark'
             )
             st.plotly_chart(momentum_fig)
