@@ -15,55 +15,7 @@ def get_stock_data(ticker, start_date, end_date):
     info = stock.info
     return hist, info
 
-# Función para calcular indicadores técnicos
-@st.cache_data
-def calculate_technical_indicators(hist):
-    data = hist.copy()
-    data['SMA_50'] = ta.trend.sma_indicator(data['Close'], window=50)
-    data['SMA_100'] = ta.trend.sma_indicator(data['Close'], window=100)
-    data['SMA_200'] = ta.trend.sma_indicator(data['Close'], window=200)
-    data['EMA_20'] = ta.trend.ema_indicator(data['Close'], window=20)
-    data['EMA_50'] = ta.trend.ema_indicator(data['Close'], window=50)
-    bollinger = ta.volatility.BollingerBands(close=data['Close'])
-    data['BB_High'] = bollinger.bollinger_hband()
-    data['BB_Low'] = bollinger.bollinger_lband()
-    data['BB_Middle'] = bollinger.bollinger_mavg()
-    stoch = ta.momentum.StochasticOscillator(high=data['High'], low=data['Low'], close=data['Close'])
-    data['Stoch_K'] = stoch.stoch()
-    data['Stoch_D'] = stoch.stoch_signal()
-    data['RSI'] = ta.momentum.RSIIndicator(data['Close']).rsi()
-    data['Momentum'] = ta.momentum.roc(data['Close'], window=10)
-    macd = ta.trend.MACD(data['Close'])
-    data['MACD'] = macd.macd()
-    data['MACD_Signal'] = macd.macd_signal()
-    data['MACD_Histogram'] = macd.macd_diff()
-    adx = ta.trend.ADXIndicator(high=data['High'], low=data['Low'], close=data['Close'])
-    data['ADX'] = adx.adx()
-    data['ADX_Pos'] = adx.adx_pos()
-    data['ADX_Neg'] = adx.adx_neg()
-    data['CCI'] = ta.trend.CCIIndicator(high=data['High'], low=data['Low'], close=data['Close']).cci()
-    obv = ta.volume.OnBalanceVolumeIndicator(close=data['Close'], volume=data['Volume'])
-    data['OBV'] = obv.on_balance_volume()
-    vwap = ta.volume.VolumeWeightedAveragePrice(high=data['High'], low=data['Low'], close=data['Close'], volume=data['Volume'])
-    data['VWAP'] = vwap.volume_weighted_average_price()
-    return data
-
-# Función para actualizar el diseño de los gráficos
-def update_layout(fig, title, yaxis_title):
-    fig.update_layout(
-        title=title,
-        title_font=dict(size=18, color='white'),
-        xaxis_title='Fecha',
-        xaxis_title_font=dict(size=14, color='white'),
-        yaxis_title=yaxis_title,
-        yaxis_title_font=dict(size=14, color='white'),
-        plot_bgcolor='black',
-        paper_bgcolor='black',
-        font=dict(color='white'),
-        xaxis=dict(gridcolor='grey', zerolinecolor='grey'),
-        yaxis=dict(gridcolor='grey', zerolinecolor='grey')
-    )
-    return fig
+Error: could not convert string to float: ''
 
 # Funciones adicionales para la gestión de carteras
 def get_user_input():
