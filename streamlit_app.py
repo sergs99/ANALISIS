@@ -499,4 +499,3 @@ if menu == 'Gestión de Carteras':
 else:
     st.write('Selecciona una opción del menú para mostrar el contenido.')
 
-)
