@@ -326,8 +326,7 @@ if menu != 'Selecciona una opción':
 
         elif menu == 'Gestión de Carteras':
             st.subheader('Gestión de Carteras')
-            st.write('Esta sección está en desarrollo. Aquí puedes gestionar tus carteras.')
-
+    
 # Función para solicitar la entrada del usuario usando widgets de Streamlit
 def get_user_input():
     st.sidebar.header('Parámetros de la Cartera')
