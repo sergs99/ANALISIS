@@ -4,6 +4,12 @@ import plotly.graph_objs as go
 import pandas as pd
 from datetime import datetime, timedelta
 import ta
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from scipy.stats import norm
+from scipy.optimize import minimize
+from datetime import datetime
 
 # Función para obtener datos históricos y la información del stock
 @st.cache_data
@@ -321,12 +327,6 @@ if menu != 'Selecciona una opción':
         elif menu == 'Gestión de Carteras':
             st.subheader('Gestión de Carteras')
             st.write('Esta sección está en desarrollo. Aquí puedes gestionar tus carteras.')
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-from scipy.stats import norm
-from scipy.optimize import minimize
-from datetime import datetime
 
 # Función para solicitar la entrada del usuario usando widgets de Streamlit
 def get_user_input():
