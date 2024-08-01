@@ -321,9 +321,6 @@ if menu != 'Selecciona una opción':
         elif menu == 'Gestión de Carteras':
             st.subheader('Gestión de Carteras')
             st.write('Esta sección está en desarrollo. Aquí puedes gestionar tus carteras.')
-import streamlit as st
-import yfinance as yf
-import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
