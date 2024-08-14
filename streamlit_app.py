@@ -275,48 +275,49 @@ if menu != 'Selecciona una opción':
             )
             st.plotly_chart(vwap_fig)
 
-        elif menu == 'Análisis Fundamental':
-            st.subheader(f'Análisis Fundamental de {ticker}')
-
-            # Información financiera organizada
-            fundamental_data = {
-                'Nombre': info.get('shortName', 'N/A'),
-                'Sector': info.get('sector', 'N/A'),
-                'Industria': info.get('industry', 'N/A'),
-                'Precio Actual': f"${info.get('currentPrice', 'N/A'):.2f}" if 'currentPrice' in info else 'N/A',
-                'Ratios de Valoración': {
-                    'Price Earnings Ratio': info.get('trailingPE', 'N/A'),
-                    'Dividend Yield': f"{info.get('dividendYield', 'N/A')*100:.2f}%" if info.get('dividendYield') else 'N/A',
-                    'Price to Book Value': info.get('priceToBook', 'N/A'),
-                    'PEG Ratio (5yr expected)': info.get('pegRatio', 'N/A'),
-                    'Price to Cash Flow Ratio': info.get('priceToCashflow', 'N/A'),
-                    'EV/EBITDA': info.get('enterpriseToEbitda', 'N/A')
-                },
-                'Ratios de Rentabilidad': {
-                    'Return on Equity': f"{info.get('returnOnEquity', 'N/A')*100:.2f}%" if info.get('returnOnEquity') else 'N/A',
-                    'Return on Assets': f"{info.get('returnOnAssets', 'N/A')*100:.2f}%" if info.get('returnOnAssets') else 'N/A',
-                    'Profit Margin': f"{info.get('profitMargins', 'N/A')*100:.2f}%" if info.get('profitMargins') else 'N/A',
-                    'Operating Margin (ttm)': f"{info.get('operatingMargins', 'N/A')*100:.2f}%" if info.get('operatingMargins') else 'N/A',
-                    'Payout Ratio': f"{info.get('payoutRatio', 'N/A')*100:.2f}%" if info.get('payoutRatio') else 'N/A'
-                },
-                'Ratios de Liquidez y Solvencia': {
-                    'Current Ratio (mrq)': info.get('currentRatio', 'N/A'),
-                    'Total Debt/Equity (mrq)': info.get('debtToEquity', 'N/A')
-                },
-                'Otras Métricas': {
-                    'Volumen Actual': f"{info.get('volume', 'N/A'):,}" if 'volume' in info else 'N/A',
-                    'Earnings Per Share (EPS)': info.get('trailingEps', 'N/A'),
-                    'Capitalización de Mercado': f"${info.get('marketCap', 'N/A') / 1e9:.2f} B" if info.get('marketCap') else 'N/A',
-                    'Beta': info.get('beta', 'N/A')
-                }
+            elif submenu_acciones == "Análisis Fundamental":
+        st.subheader("Análisis Fundamental")
+        
+        # Información financiera organizada
+        fundamental_data = {
+            'Nombre': info.get('shortName', 'N/A'),
+            'Sector': info.get('sector', 'N/A'),
+            'Industria': info.get('industry', 'N/A'),
+            'Precio Actual': f"${info.get('currentPrice', 'N/A'):.2f}" if 'currentPrice' in info else 'N/A',
+            'Ratios de Valoración': {
+                'Price Earnings Ratio': info.get('trailingPE', 'N/A'),
+                'Dividend Yield': f"{info.get('dividendYield', 'N/A')*100:.2f}%" if info.get('dividendYield') else 'N/A',
+                'Price to Book Value': info.get('priceToBook', 'N/A'),
+                'PEG Ratio (5yr expected)': info.get('pegRatio', 'N/A'),
+                'Price to Cash Flow Ratio': info.get('priceToCashflow', 'N/A'),
+                'EV/EBITDA': info.get('enterpriseToEbitda', 'N/A')
+            },
+            'Ratios de Rentabilidad': {
+                'Return on Equity': f"{info.get('returnOnEquity', 'N/A')*100:.2f}%" if info.get('returnOnEquity') else 'N/A',
+                'Return on Assets': f"{info.get('returnOnAssets', 'N/A')*100:.2f}%" if info.get('returnOnAssets') else 'N/A',
+                'Profit Margin': f"{info.get('profitMargins', 'N/A')*100:.2f}%" if info.get('profitMargins') else 'N/A',
+                'Operating Margin (ttm)': f"{info.get('operatingMargins', 'N/A')*100:.2f}%" if info.get('operatingMargins') else 'N/A',
+                'Payout Ratio': f"{info.get('payoutRatio', 'N/A')*100:.2f}%" if info.get('payoutRatio') else 'N/A'
+            },
+            'Ratios de Liquidez y Solvencia': {
+                'Current Ratio (mrq)': info.get('currentRatio', 'N/A'),
+                'Total Debt/Equity (mrq)': info.get('debtToEquity', 'N/A')
+            },
+            'Otras Métricas': {
+                'Volumen Actual': f"{info.get('volume', 'N/A'):,}" if 'volume' in info else 'N/A',
+                'Earnings Per Share (EPS)': info.get('trailingEps', 'N/A'),
+                'Capitalización de Mercado': f"${info.get('marketCap', 'N/A') / 1e9:.2f} B" if info.get('marketCap') else 'N/A',
+                'Beta': info.get('beta', 'N/A')
             }
+        }
 
-            for category, metrics in fundamental_data.items():
-                st.write(f"**{category}:**")
-                if isinstance(metrics, dict):
-                    st.write(pd.DataFrame(list(metrics.items()), columns=['Métrica', 'Valor']).set_index('Métrica'))
-                else:
-                    st.write(metrics)
+        for category, metrics in fundamental_data.items():
+            st.write(f"**{category}:**")
+            if isinstance(metrics, dict):
+                st.write(pd.DataFrame(list(metrics.items()), columns=['Métrica', 'Valor']).set_index('Métrica'))
+            else:
+                st.write(metrics)
+
 
         elif menu == 'Gestión de Carteras':
             st.subheader('Gestión de Carteras')
